@@ -20,7 +20,7 @@ st.markdown("""
 
 # api config
 genai.configure(api_key="AIzaSyATyZtvD5t_XscM3b7ZFdvh7gFfSjhvp7U")
-gemini_model = genai.GenerativeModel('gemini-1.5-flash')
+gemini_model = genai.GenerativeModel('gemini-2.0-flash')
 
 # state management
 if "page" not in st.session_state: st.session_state.page = "landing"
