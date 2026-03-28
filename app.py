@@ -167,4 +167,5 @@ elif st.session_state.page == "chat":
                     st.session_state.chat_history.append({"role": "assistant", "content": bot_response})
                     
                 except Exception as e:
-                    st.error("⚠️ The Virtual Educator network is currently busy. Please wait a moment and try again.")
+                  
+                    st.error(f"⚠️ Debug Error: {e}")
