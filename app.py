@@ -60,7 +60,7 @@ elif st.session_state.page == "login":
         st.button("Continue with Google 🌐", use_container_width=True)
     with tab2:
         st.text_input("Full Name")
-        st.text_input("Email ID")
+        st.text_input("Email ID", key="register_email") 
         st.button("Create Account", use_container_width=True, on_click=switch_page, args=("intake",))
 
 # --- PHASE 2: INTAKE ---
