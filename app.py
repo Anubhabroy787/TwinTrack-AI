@@ -2,8 +2,9 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
-import google.generativeai as genai
+from groq import Groq
 
+# --- UI & CSS ---
 st.set_page_config(page_title="TwinTrack AI | Royal Bengal Coders", page_icon="🎓", layout="centered")
 
 st.markdown("""
@@ -18,12 +19,11 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Pull the key safely from Streamlit's hidden secrets
-api_key = st.secrets["GEMINI_API_KEY"]
-genai.configure(api_key=api_key)
-gemini_model = genai.GenerativeModel('gemini-2.0-flash')
+# --- GROQ API SETUP ---
+api_key = st.secrets["GROQ_API_KEY"]
+client = Groq(api_key=api_key)
 
-# state management
+# --- STATE MANAGEMENT ---
 if "page" not in st.session_state: st.session_state.page = "landing"
 if "chat_history" not in st.session_state: st.session_state.chat_history = []
 if "user_data" not in st.session_state: st.session_state.user_data = {}
@@ -32,13 +32,13 @@ def switch_page(page_name):
     st.session_state.page = page_name
     st.rerun()
 
+# --- PHASE 1: LANDING ---
 if st.session_state.page == "landing":
     st.markdown("""
         <div style="text-align: center; padding: 40px;">
             <h1 style="font-size: 60px; font-weight: 900; color: #1E88E5;">TwinTrack AI</h1>
             <h3 style="color: #43A047;">A Digital Twin for Student Life</h3>
             <p style="color: gray; margin-bottom: 0px;">An Initiative by <b>Royal Bengal Coders</b></p>
-            <p style="font-size: 12px; color: gray;">(Ankit Biswas, Argha Banerjee, Priyanshu Saha, Anubhab Roy, Chandradeep Mondal)</p>
             <br>
             <h4 style="font-style: italic;"> "Stop guessing your future outcome - TwinTrack AI predicts your performance and guides you with a smart study roadmap." </h4>
         </div>
@@ -48,6 +48,7 @@ if st.session_state.page == "landing":
     with col2:
         st.button("🚀 Start Your Journey", use_container_width=True, on_click=switch_page, args=("login",))
 
+# --- PHASE 1.5: LOGIN ---
 elif st.session_state.page == "login":
     st.markdown("<h2 style='text-align: center;'>Welcome to TwinTrack AI</h2>", unsafe_allow_html=True)
     tab1, tab2 = st.tabs(["Sign In", "Sign Up"])
@@ -59,9 +60,10 @@ elif st.session_state.page == "login":
         st.button("Continue with Google 🌐", use_container_width=True)
     with tab2:
         st.text_input("Full Name")
-        st.text_input("Email ID", key="reg_email")
+        st.text_input("Email ID")
         st.button("Create Account", use_container_width=True, on_click=switch_page, args=("intake",))
 
+# --- PHASE 2: INTAKE ---
 elif st.session_state.page == "intake":
     st.markdown("## 📝 Academic Credentials")
     
@@ -80,6 +82,7 @@ elif st.session_state.page == "intake":
             st.session_state.user_data.update({"name": u_name, "course": course, "year": year, "sem": sem})
             switch_page("analysis")
 
+# --- PHASE 3: ANALYSIS ---
 elif st.session_state.page == "analysis":
     d = st.session_state.user_data
     st.info(f"Hey {d['name']}, you are pursuing {d['course']}, Year {d['year']}, Sem {d['sem']}.")
@@ -92,7 +95,6 @@ elif st.session_state.page == "analysis":
         days = st.number_input("Days left for upcoming exam:", min_value=0, value=30)
         hrs = st.number_input("Hours of study at home:", min_value=0, value=2)
 
-    # digital twin sim graph
     st.markdown("### 📈 Your Digital Twin Trajectory")
     hours_range = np.linspace(0, 10, 20)
     predicted_trend = np.clip(cgpa + (hours_range * 0.2) + ((att-75) * 0.01), 0, 10)
@@ -103,7 +105,6 @@ elif st.session_state.page == "analysis":
                     mode='markers', marker=dict(size=12, color='red'), name="Your Current Twin")
     st.plotly_chart(fig, use_container_width=True)
 
-    # check size before processing
     st.markdown("### 📂 Submit Your Syllabus")
     file = st.file_uploader("Upload Syllabus", type=['pdf', 'txt'])
     st.markdown("<p style='color:red; font-size:12px;'>(The file size should not exceed 50 MB)</p>", unsafe_allow_html=True)
@@ -120,6 +121,7 @@ elif st.session_state.page == "analysis":
                 st.session_state.user_data.update({"att": att, "days": days, "cgpa": cgpa, "hrs": hrs, "subject": sub})
                 switch_page("chat")
 
+# --- PHASE 4: CHAT WITH GROQ (LLaMA 3) ---
 elif st.session_state.page == "chat":
     d = st.session_state.user_data
     
@@ -135,11 +137,9 @@ elif st.session_state.page == "chat":
 
     st.markdown("### 🤖 Virtual Educator")
     
-    # init prompt constraints
     if not st.session_state.chat_history:
-        att_msg = "Your attendance is above 75%. You can strategically bunk some non-essential classes to increase your home study hours." if d['att'] >= 75 else f"CRITICAL: Your attendance is {d['att']}%. You must attend the next classes to hit the 75% criteria. Do not bunk."
-        cgpa_msg = "To improve your CGPA, let's focus on high-weightage topics."
-        st.session_state.chat_history.append({"role": "assistant", "content": f"Hello {d['name']}! {att_msg} {cgpa_msg} Based on the syllabus for {d['subject']}, I have prepared the hot topics. What would you like to start with?"})
+        att_msg = "Your attendance is above 75%. You can strategically bunk some classes." if d['att'] >= 75 else f"CRITICAL: Your attendance is {d['att']}%. You must attend classes."
+        st.session_state.chat_history.append({"role": "assistant", "content": f"Hello {d['name']}! {att_msg} Based on the syllabus for {d['subject']}, what would you like to start with?"})
 
     for msg in st.session_state.chat_history:
         with st.chat_message(msg["role"]): st.write(msg["content"])
@@ -148,10 +148,23 @@ elif st.session_state.page == "chat":
         st.session_state.chat_history.append({"role": "user", "content": prompt})
         with st.chat_message("user"): st.write(prompt)
         
-        sys_prompt = f"System Instruction: You are a Virtual Educator for {d['name']}. ONLY discuss academics, exams, and study routines. If the user asks about anything outside of education, strictly reply with: 'Sorry to interrupt, I am your virtual educator. I will only give suggestions about your academics so I can't help you in this matter.' The current subject is {d['subject']}."
+        sys_prompt = f"You are a strict Virtual Educator for {d['name']}. ONLY discuss academics and study routines. The subject is {d['subject']}."
         
         with st.chat_message("assistant"):
             with st.spinner("Analyzing..."):
-                response = gemini_model.generate_content(f"{sys_prompt}\n\nUser Question: {prompt}")
-                st.write(response.text)
-                st.session_state.chat_history.append({"role": "assistant", "content": response.text})
+                try:
+                    # Groq API Call
+                    chat_completion = client.chat.completions.create(
+                        messages=[
+                            {"role": "system", "content": sys_prompt},
+                            {"role": "user", "content": prompt}
+                        ],
+                        model="llama3-8b-8192",
+                    )
+                    
+                    bot_response = chat_completion.choices[0].message.content
+                    st.write(bot_response)
+                    st.session_state.chat_history.append({"role": "assistant", "content": bot_response})
+                    
+                except Exception as e:
+                    st.error("⚠️ The Virtual Educator network is currently busy. Please wait a moment and try again.")
