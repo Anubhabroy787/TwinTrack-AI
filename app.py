@@ -138,17 +138,20 @@ elif st.session_state.page == "chat":
     st.markdown("### 🤖 Virtual Educator")
     
     if not st.session_state.chat_history:
-        att_msg = "Your attendance is above 75%. You can strategically bunk some classes." if d['att'] >= 75 else f"CRITICAL: Your attendance is {d['att']}%. You must attend classes."
-        st.session_state.chat_history.append({"role": "assistant", "content": f"Hello {d['name']}! {att_msg} Based on the syllabus for {d['subject']}, what would you like to start with?"})
+        status = "CRITICAL" if d['att'] < 75 else "STABLE"
+        initial_msg = f"Analysis Complete. Status: {status}. {d['name']}, you have {d['days']} days left for {d['subject']}. Your {d['hrs']}-hour routine is factored in. Ready for your custom strategy?"
+        st.session_state.chat_history.append({"role": "assistant", "content": initial_msg})
 
     for msg in st.session_state.chat_history:
-        with st.chat_message(msg["role"]): st.write(msg["content"])
+        with st.chat_message(msg["role"]): 
+            st.write(msg["content"])
 
     if prompt := st.chat_input("Talk to your Virtual Educator..."):
         st.session_state.chat_history.append({"role": "user", "content": prompt})
-        with st.chat_message("user"): st.write(prompt)
+        with st.chat_message("user"): 
+            st.write(prompt)
         
-sys_prompt = f"""
+        sys_prompt = f"""
         You are 'TwinTrack AI', a high-performance Academic Strategist for {d['name']}.
         
         USER DATA:
@@ -160,16 +163,15 @@ sys_prompt = f"""
         - Study Hours: {d['hrs']}
         
         TASK:
-        1. If attendance < 75%, warn them about the eligibility danger zone.
+        1. If attendance < 75%, warn them about eligibility danger.
         2. If attendance >= 75%, approve 'Tactical Bunking' for study leave.
-        3. Analyze if {d['hrs']} hours/day is enough to cover {d['subject']} in {d['days']} days based on their CGPA.
-        4. ONLY discuss academics. Reject any non-study topics firmly.
+        3. Analyze if {d['hrs']} hours/day is enough to cover {d['subject']} in {d['days']} days.
+        4. ONLY discuss academics.
         """
         
         with st.chat_message("assistant"):
             with st.spinner("Analyzing..."):
                 try:
-                    # groq inference engine
                     chat_completion = client.chat.completions.create(
                         messages=[
                             {"role": "system", "content": sys_prompt},
@@ -183,5 +185,4 @@ sys_prompt = f"""
                     st.session_state.chat_history.append({"role": "assistant", "content": bot_response})
                     
                 except Exception as e:
-                    # failsafe for demo
-                    st.error("⚠️ The Virtual Educator is currently busy. Please wait a moment and try again.")
+                    st.error("⚠️ The Virtual Educator is busy. Please wait a moment.")
