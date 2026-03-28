@@ -1,25 +1,52 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import plotly.express as px
+import plotly.graph_objects as go
 from groq import Groq
+import PyPDF2
+import time
 
-# --- UI & CSS ---
-st.set_page_config(page_title="TwinTrack AI | Royal Bengal Coders", page_icon="🎓", layout="centered")
+# --- UI & CSS CONFIGURATION (The "Cool & Smooth" Factor) ---
+st.set_page_config(page_title="TwinTrack AI | Royal Bengal Coders", page_icon="🎓", layout="wide")
 
 st.markdown("""
 <style>
-    .stApp { background-color: #0E1117; }
-    h1 { text-shadow: 0 0 10px #00d2ff; font-family: 'Orbitron', sans-serif; }
-    div.stButton > button {
-        background: linear-gradient(45deg, #00d2ff, #3a7bd5);
-        color: white; border: none; border-radius: 8px; transition: 0.3s;
+    /* Dark Theme & Smooth Transitions */
+    .stApp { background-color: #0b0f19; color: #e0e6ed; }
+    
+    /* Glowing Title */
+    h1 { 
+        text-shadow: 0 0 20px rgba(0, 210, 255, 0.8); 
+        font-family: 'Orbitron', sans-serif; 
+        text-align: center;
     }
-    div.stButton > button:hover { transform: scale(1.02); box-shadow: 0px 0px 15px rgba(0, 210, 255, 0.6); }
+    
+    /* Animated Gradient Buttons */
+    div.stButton > button {
+        background: linear-gradient(45deg, #00c6ff, #0072ff);
+        color: white; 
+        border: none; 
+        border-radius: 10px; 
+        transition: all 0.4s ease;
+        font-weight: bold;
+        box-shadow: 0px 4px 15px rgba(0, 114, 255, 0.4);
+    }
+    div.stButton > button:hover { 
+        transform: translateY(-3px) scale(1.02); 
+        box-shadow: 0px 8px 25px rgba(0, 210, 255, 0.8); 
+    }
+    
+    /* Clean Inputs */
+    .stTextInput>div>div>input, .stNumberInput>div>div>input, .stSelectbox>div>div>div {
+        background-color: #161b22;
+        color: #00d2ff;
+        border-radius: 8px;
+        border: 1px solid #30363d;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-# --- GROQ API SETUP ---
+# --- API & BACKEND SETUP ---
 api_key = st.secrets["GROQ_API_KEY"]
 client = Groq(api_key=api_key)
 
@@ -30,154 +57,238 @@ if "user_data" not in st.session_state: st.session_state.user_data = {}
 
 def switch_page(page_name):
     st.session_state.page = page_name
-    st.rerun()
+    # st.rerun() removed to kill the yellow warning bug!
 
-# --- PHASE 1: LANDING ---
+# --- PDF SMART SCANNER ---
+def extract_semester_syllabus(file, subject_name, semester_val):
+    try:
+        pdf_reader = PyPDF2.PdfReader(file)
+        sem_str = f"Semester {semester_val}"
+        sem_alt = f"{semester_val} Semester"
+        sem_short = f"Sem {semester_val}"
+        
+        relevant_pages = []
+        for page in pdf_reader.pages:
+            p_text = page.extract_text()
+            if p_text and any(s.lower() in p_text.lower() for s in [sem_str, sem_alt, sem_short]):
+                if subject_name.lower() in p_text.lower():
+                    relevant_pages.append(p_text)
+        
+        if not relevant_pages: # Fallback if specific semester string isn't perfectly matched
+            for page in pdf_reader.pages:
+                p_text = page.extract_text()
+                if p_text and subject_name.lower() in p_text.lower():
+                    relevant_pages.append(p_text)
+                    
+        return "\n".join(relevant_pages)[:6000] # Cap for speed
+    except Exception as e:
+        return f"Syllabus extraction failed: {e}"
+
+# ==========================================
+# PHASE 1: LANDING PAGE
+# ==========================================
 if st.session_state.page == "landing":
+    st.markdown("<br><br><br>", unsafe_allow_html=True)
     st.markdown("""
-        <div style="text-align: center; padding: 40px;">
-            <h1 style="font-size: 60px; font-weight: 900; color: #1E88E5;">TwinTrack AI</h1>
-            <h3 style="color: #43A047;">A Digital Twin for Student Life</h3>
-            <p style="color: gray; margin-bottom: 0px;">An Initiative by <b>Royal Bengal Coders</b></p>
+        <div style="text-align: center;">
+            <h1 style="font-size: 70px; font-weight: 900; background: -webkit-linear-gradient(#00d2ff, #3a7bd5); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">TwinTrack AI</h1>
+            <h3 style="color: #a3b8cc; letter-spacing: 2px;">THE ACADEMIC DIGITAL TWIN</h3>
+            <p style="color: #58a6ff; font-family: monospace;">Developed by the Royal Bengal Coders</p>
             <br>
-            <h4 style="font-style: italic;"> "Stop guessing your future outcome - TwinTrack AI predicts your performance and guides you with a smart study roadmap." </h4>
+            <h5 style="font-style: italic; color: #8b949e; max-width: 600px; margin: auto;">"Stop guessing your trajectory. Upload your syllabus, visualize your future, and let LLaMA 3.1 calculate your exact survival path."</h5>
         </div>
+        <br><br>
     """, unsafe_allow_html=True)
     
-    col1, col2, col3 = st.columns([1, 1.5, 1])
+    col1, col2, col3 = st.columns([1, 1, 1])
     with col2:
-        st.button("🚀 Start Your Journey", use_container_width=True, on_click=switch_page, args=("login",))
+        st.button("⚡ INITIALIZE SYSTEM", use_container_width=True, on_click=switch_page, args=("login",))
 
-# --- PHASE 1.5: LOGIN ---
+# ==========================================
+# PHASE 1.5: AUTHENTICATION
+# ==========================================
 elif st.session_state.page == "login":
-    st.markdown("<h2 style='text-align: center;'>Welcome to TwinTrack AI</h2>", unsafe_allow_html=True)
-    tab1, tab2 = st.tabs(["Sign In", "Sign Up"])
-    with tab1:
-        st.text_input("Email ID")
-        st.text_input("Password", type="password")
-        st.button("Sign In", use_container_width=True, on_click=switch_page, args=("intake",))
-        st.divider()
-        st.button("Continue with Google 🌐", use_container_width=True)
-    with tab2:
-        st.text_input("Full Name")
-        st.text_input("Email ID", key="register_email") 
-        st.button("Create Account", use_container_width=True, on_click=switch_page, args=("intake",))
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.markdown("<h2 style='text-align: center; color: #00d2ff;'>Access Portal</h2>", unsafe_allow_html=True)
+        tab1, tab2 = st.tabs(["Sign In", "Sign Up"])
+        with tab1:
+            st.text_input("Email ID", value="anubhab@narula.edu")
+            st.text_input("Password", type="password", value="********")
+            st.button("Secure Login", use_container_width=True, on_click=switch_page, args=("intake",))
+        with tab2:
+            st.text_input("Full Name")
+            st.text_input("Email ID", key="register_email") # Duplicate ID Bug Fixed!
+            st.button("Create Account", use_container_width=True, on_click=switch_page, args=("intake",))
 
-# --- PHASE 2: INTAKE ---
+# ==========================================
+# PHASE 2: INTAKE (Pre-filled for Demo)
+# ==========================================
 elif st.session_state.page == "intake":
-    st.markdown("## 📝 Academic Credentials")
+    st.markdown("<h2 style='color: #00d2ff;'>📝 Calibration Matrix</h2>", unsafe_allow_html=True)
+    st.markdown("Enter your current academic vectors.")
     
-    u_name = st.text_input("Your Name:", value=st.session_state.user_data.get("name", ""))
+    u_name = st.text_input("Student Designation:", value=st.session_state.user_data.get("name", "Anubhab Roy"))
     col1, col2 = st.columns(2)
     with col1:
-        course = st.selectbox("Pursuing Course:", ["Select", "B.Tech", "BBA", "BCA"])
-        year = st.selectbox("Current Year of Study:", ["Select", "1st", "2nd", "3rd", "4th"])
+        course = st.selectbox("Program:", ["B.Tech", "BBA", "BCA", "Select"], index=0)
+        year = st.selectbox("Year:", ["1st", "2nd", "3rd", "4th", "Select"], index=1)
     with col2:
-        sem = st.selectbox("Current Semester:", ["Select", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th"])
+        sem = st.selectbox("Semester:", ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th", "Select"], index=2)
     
-    if st.button("Next ➡️", use_container_width=True):
-        if "Select" in [course, year, sem] or not u_name:
-            st.error("Please fill all fields!")
-        else:
-            st.session_state.user_data.update({"name": u_name, "course": course, "year": year, "sem": sem})
-            switch_page("analysis")
+    st.write("")
+    if st.button("Generate Trajectory ➡️", use_container_width=True):
+        st.session_state.user_data.update({"name": u_name, "course": course, "year": year, "sem": sem})
+        switch_page("analysis")
 
-# --- PHASE 3: ANALYSIS ---
+# ==========================================
+# PHASE 3: THE 3D DIGITAL TWIN & PDF SCAN
+# ==========================================
 elif st.session_state.page == "analysis":
     d = st.session_state.user_data
-    st.info(f"Hey {d['name']}, you are pursuing {d['course']}, Year {d['year']}, Sem {d['sem']}.")
+    st.toast(f"Profile Synced: {d['name']} | {d['course']} Sem {d['sem']}", icon="✅")
     
     col_a, col_b = st.columns(2)
     with col_a:
-        att = st.number_input("Attendance percentage (0-100):", min_value=0, max_value=100, value=70)
-        cgpa = st.number_input("Overall CGPA till now:", min_value=0.0, max_value=10.0, format="%.2f", value=7.5)
+        att = st.number_input("Current Attendance (%):", min_value=0, max_value=100, value=70)
+        cgpa = st.number_input("Current CGPA:", min_value=0.0, max_value=10.0, format="%.2f", value=7.5)
     with col_b:
-        days = st.number_input("Days left for upcoming exam:", min_value=0, value=30)
-        hrs = st.number_input("Hours of study at home:", min_value=0, value=2)
+        days = st.number_input("Days to Exam:", min_value=0, value=30)
+        hrs = st.number_input("Daily Study Hours:", min_value=0, value=2)
 
-    st.markdown("### 📈 Your Digital Twin Trajectory")
-    hours_range = np.linspace(0, 10, 20)
-    predicted_trend = np.clip(cgpa + (hours_range * 0.2) + ((att-75) * 0.01), 0, 10)
-    df_trend = pd.DataFrame({"Study Hours": hours_range, "Predicted CGPA": predicted_trend})
+    st.divider()
     
-    fig = px.line(df_trend, x="Study Hours", y="Predicted CGPA", template="plotly_dark")
-    fig.add_scatter(x=[hrs], y=[np.clip(cgpa + (hrs * 0.2) + ((att-75) * 0.01), 0, 10)], 
-                    mode='markers', marker=dict(size=12, color='red'), name="Your Current Twin")
+    # --- COOL 3D GRAPHIC ---
+    st.markdown("<h3 style='color: #00d2ff;'>🌌 3D Digital Twin Projection</h3>", unsafe_allow_html=True)
+    
+    # Create mesh data for 3D surface
+    study_mesh = np.linspace(0, 10, 20)
+    att_mesh = np.linspace(0, 100, 20)
+    study_grid, att_grid = np.meshgrid(study_mesh, att_mesh)
+    cgpa_grid = np.clip(cgpa + (study_grid * 0.15) + ((att_grid - 75) * 0.01), 0, 10)
+
+    fig = go.Figure(data=[go.Surface(z=cgpa_grid, x=study_grid, y=att_grid, colorscale='Tealgrn', opacity=0.8)])
+    
+    # Plot the user's EXACT current position as a glowing red orb
+    current_predicted_cgpa = np.clip(cgpa + (hrs * 0.15) + ((att - 75) * 0.01), 0, 10)
+    fig.add_trace(go.Scatter3d(
+        x=[hrs], y=[att], z=[current_predicted_cgpa],
+        mode='markers', marker=dict(size=8, color='red', symbol='circle', line=dict(color='white', width=2)),
+        name='Your Current Twin'
+    ))
+
+    fig.update_layout(
+        scene=dict(
+            xaxis_title='Study Hours', yaxis_title='Attendance %', zaxis_title='Predicted CGPA',
+            xaxis=dict(backgroundcolor="black", gridcolor="gray"),
+            yaxis=dict(backgroundcolor="black", gridcolor="gray"),
+            zaxis=dict(backgroundcolor="black", gridcolor="gray")
+        ),
+        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+        margin=dict(l=0, r=0, b=0, t=0), height=500
+    )
     st.plotly_chart(fig, use_container_width=True)
 
-    st.markdown("### 📂 Submit Your Syllabus")
-    file = st.file_uploader("Upload Syllabus", type=['pdf', 'txt'])
-    st.markdown("<p style='color:red; font-size:12px;'>(The file size should not exceed 50 MB)</p>", unsafe_allow_html=True)
+    st.divider()
+
+    # --- PDF UPLOAD & SMART SCAN ---
+    st.markdown("<h3 style='color: #00d2ff;'>📂 Inject Syllabus Data</h3>", unsafe_allow_html=True)
+    file = st.file_uploader("Upload University Syllabus (PDF)", type=['pdf'])
 
     if file:
-        if file.size > 50 * 1024 * 1024:
-            st.error("File exceeds 50MB limit!")
-        else:
-            st.success("Syllabus analyzed!")
-            subjects = ["Data Structures & Algorithms", "Computer Architecture", "Digital Logic", "Mathematics"]
-            sub = st.selectbox("In which subject do you need help?", subjects)
+        st.success("File verified. Ready for extraction.")
+        subjects = ["Data Structures & Algorithms", "Computer Organization", "Digital Logic", "Mathematics"]
+        sub = st.selectbox("Target Extraction Subject:", subjects, index=0)
+        
+        if st.button("🔥 INITIALIZE BEAST MODE", use_container_width=True):
+            # Simulated smooth loading bar for presentation wow-factor
+            progress_text = "Parsing Vector Data..."
+            my_bar = st.progress(0, text=progress_text)
+            for percent_complete in range(100):
+                time.sleep(0.01)
+                my_bar.progress(percent_complete + 1, text=progress_text)
+            my_bar.empty()
             
-            if st.button("Generate Strategy 🚀", use_container_width=True):
-                st.session_state.user_data.update({"att": att, "days": days, "cgpa": cgpa, "hrs": hrs, "subject": sub})
-                switch_page("chat")
+            with st.spinner(f"Executing Smart Scan for '{sub}' in Sem {d['sem']}..."):
+                raw_syllabus = extract_semester_syllabus(file, sub, d['sem'])
+                
+                st.session_state.user_data.update({
+                    "att": att, "days": days, "cgpa": cgpa, 
+                    "hrs": hrs, "subject": sub, 
+                    "syllabus_content": raw_syllabus
+                })
+            st.balloons()
+            switch_page("chat")
 
-# --- PHASE 4: CHAT WITH GROQ (LLaMA 3) ---
+# ==========================================
+# PHASE 4: THE BEAST (LLaMA 3.1 Chat)
+# ==========================================
 elif st.session_state.page == "chat":
     d = st.session_state.user_data
     
+    # -- Navigation & Metrics Sidebar --
     with st.sidebar:
-        st.title("TwinTrack Controls")
-        
-        # Option 1: Start completely over
-        if st.button("➕ New Chat"):
+        st.markdown("<h2 style='color: #00d2ff;'>Twin Controls</h2>", unsafe_allow_html=True)
+        if st.button("⬅️ Back to Analysis"): switch_page("analysis")
+        if st.button("🔄 System Reset"): 
             st.session_state.chat_history = []
             switch_page("intake")
-            
-        # Option 2: Go back to tweak metrics (Attendance/CGPA)
-        if st.button("⬅️ Back to Analysis"):
-            switch_page("analysis")
-            
+        
         st.divider()
-        st.write(f"**Target Subject:** {d['subject']}")
-        st.write(f"**Current Attendance:** {d['att']}%")
-        st.write(f"**Days to Exam:** {d['days']}")
+        st.markdown(f"**Target Subject:** `{d['subject']}`")
+        st.markdown(f"**Attendance:** `{d['att']}%`")
+        st.markdown(f"**Exam T-Minus:** `{d['days']} Days`")
+        st.markdown(f"**Daily Output:** `{d['hrs']} Hrs`")
 
-    st.markdown("### 🤖 Virtual Educator")
+    st.markdown("<h2 style='color: #00d2ff;'>🤖 Tactical Virtual Educator</h2>", unsafe_allow_html=True)
     
+    # -- Initial Contextual Output --
     if not st.session_state.chat_history:
-        status = "CRITICAL" if d['att'] < 75 else "STABLE"
-        initial_msg = f"Analysis Complete. Status: {status}. {d['name']}, you have {d['days']} days left for {d['subject']}. Your {d['hrs']}-hour routine is factored in. Ready for your custom strategy?"
+        status = "🔴 CRITICAL - ATTENDANCE RISK" if d['att'] < 75 else "🟢 STABLE - TACTICAL BUNK AUTHORIZED"
+        with st.status("Syncing LLaMA 3.1 Neural Link...", expanded=True) as status_box:
+            st.write("Injecting syllabus matrix...")
+            st.write("Calibrating attendance constraints...")
+            st.write("Generating optimal survival path...")
+            time.sleep(1) # Dramatic effect
+            status_box.update(label="Digital Twin Synced!", state="complete", expanded=False)
+
+        initial_msg = f"**System Initialized.** Status: {status}. \n\n{d['name']}, we have {d['days']} days to secure {d['subject']}. I have scanned the university syllabus. Based on your current {d['cgpa']} CGPA, I have formulated a specific attack plan. What topic are we starting with?"
         st.session_state.chat_history.append({"role": "assistant", "content": initial_msg})
 
+    # -- Render Chat --
     for msg in st.session_state.chat_history:
         with st.chat_message(msg["role"]): 
             st.write(msg["content"])
 
-    if prompt := st.chat_input("Talk to your Virtual Educator..."):
+    # -- User Input & AI Processing --
+    if prompt := st.chat_input("Command your TwinTrack Strategist..."):
         st.session_state.chat_history.append({"role": "user", "content": prompt})
         with st.chat_message("user"): 
             st.write(prompt)
         
+        # The Context-Heavy "Beast" Prompt
+        syllabus_data = d.get('syllabus_content', 'General topics only.')
         sys_prompt = f"""
-        You are 'TwinTrack AI', a high-performance Academic Strategist for {d['name']}.
+        You are 'TwinTrack AI', a high-performance, slightly strict Academic Strategist for an engineering student named {d['name']}.
         
         USER DATA:
-        - Course: {d['course']} (Year {d['year']}, Sem {d['sem']})
-        - CGPA: {d['cgpa']}
-        - Attendance: {d['att']}% (Criteria: 75%)
-        - Exam Subject: {d['subject']}
-        - Days Left: {d['days']}
-        - Study Hours: {d['hrs']}
+        - Student: {d['name']} | Semester: {d['sem']}
+        - Target: {d['subject']} in {d['days']} days
+        - Current Stats: {d['att']}% Attendance | {d['cgpa']} CGPA | Studies {d['hrs']} hrs/day.
         
-        TASK:
-        1. If attendance < 75%, warn them about eligibility danger.
-        2. If attendance >= 75%, approve 'Tactical Bunking' for study leave.
-        3. Analyze if {d['hrs']} hours/day is enough to cover {d['subject']} in {d['days']} days.
-        4. ONLY discuss academics.
+        RAW SYLLABUS DATA EXTRACTED FROM PDF:
+        {syllabus_data}
+        
+        STRATEGY RULES:
+        1. Base your teaching ONLY on the 'RAW SYLLABUS DATA' provided above. Mention specific topics from it.
+        2. If attendance < 75%, rigidly warn them they are failing the 75% criteria rule.
+        3. Determine if studying {d['hrs']} hours a day is actually enough math to cover the syllabus in {d['days']} days. Tell them the truth.
+        4. If they ask about games, movies, or non-academics, shut it down immediately and redirect to {d['subject']}.
+        5. Keep responses highly structured, using bullet points and bold text for readability.
         """
         
         with st.chat_message("assistant"):
-            with st.spinner("Analyzing..."):
+            with st.spinner("Processing tactical response..."):
                 try:
                     chat_completion = client.chat.completions.create(
                         messages=[
@@ -192,4 +303,4 @@ elif st.session_state.page == "chat":
                     st.session_state.chat_history.append({"role": "assistant", "content": bot_response})
                     
                 except Exception as e:
-                    st.error("⚠️ The Virtual Educator is busy. Please wait a moment.")
+                    st.error("⚠️ The Neural Link is currently overloaded. Please wait 10 seconds and try again.")
