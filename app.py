@@ -127,9 +127,16 @@ elif st.session_state.page == "chat":
     
     with st.sidebar:
         st.title("TwinTrack Controls")
+        
+        # Option 1: Start completely over
         if st.button("➕ New Chat"):
             st.session_state.chat_history = []
             switch_page("intake")
+            
+        # Option 2: Go back to tweak metrics (Attendance/CGPA)
+        if st.button("⬅️ Back to Analysis"):
+            switch_page("analysis")
+            
         st.divider()
         st.write(f"**Target Subject:** {d['subject']}")
         st.write(f"**Current Attendance:** {d['att']}%")
