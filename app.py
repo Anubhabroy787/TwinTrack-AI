@@ -148,12 +148,28 @@ elif st.session_state.page == "chat":
         st.session_state.chat_history.append({"role": "user", "content": prompt})
         with st.chat_message("user"): st.write(prompt)
         
-        sys_prompt = f"You are a strict Virtual Educator for {d['name']}. ONLY discuss academics and study routines. The subject is {d['subject']}."
+sys_prompt = f"""
+        You are 'TwinTrack AI', a high-performance Academic Strategist for {d['name']}.
+        
+        USER DATA:
+        - Course: {d['course']} (Year {d['year']}, Sem {d['sem']})
+        - CGPA: {d['cgpa']}
+        - Attendance: {d['att']}% (Criteria: 75%)
+        - Exam Subject: {d['subject']}
+        - Days Left: {d['days']}
+        - Study Hours: {d['hrs']}
+        
+        TASK:
+        1. If attendance < 75%, warn them about the eligibility danger zone.
+        2. If attendance >= 75%, approve 'Tactical Bunking' for study leave.
+        3. Analyze if {d['hrs']} hours/day is enough to cover {d['subject']} in {d['days']} days based on their CGPA.
+        4. ONLY discuss academics. Reject any non-study topics firmly.
+        """
         
         with st.chat_message("assistant"):
             with st.spinner("Analyzing..."):
                 try:
-                    # Groq API Call
+                    # groq inference engine
                     chat_completion = client.chat.completions.create(
                         messages=[
                             {"role": "system", "content": sys_prompt},
@@ -167,5 +183,5 @@ elif st.session_state.page == "chat":
                     st.session_state.chat_history.append({"role": "assistant", "content": bot_response})
                     
                 except Exception as e:
-                  
-                    st.error(f"⚠️ Debug Error: {e}")
+                    # failsafe for demo
+                    st.error("⚠️ The Virtual Educator is currently busy. Please wait a moment and try again.")
