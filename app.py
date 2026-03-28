@@ -18,8 +18,9 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# api config
-genai.configure(api_key="AIzaSyATyZtvD5t_XscM3b7ZFdvh7gFfSjhvp7U")
+# Pull the key safely from Streamlit's hidden secrets
+api_key = st.secrets["GEMINI_API_KEY"]
+genai.configure(api_key=api_key)
 gemini_model = genai.GenerativeModel('gemini-2.0-flash')
 
 # state management
