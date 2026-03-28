@@ -159,7 +159,7 @@ elif st.session_state.page == "chat":
                             {"role": "system", "content": sys_prompt},
                             {"role": "user", "content": prompt}
                         ],
-                        model="llama-3.1-8b-instan",
+                        model="llama-3.1-8b-instant",
                     )
                     
                     bot_response = chat_completion.choices[0].message.content
