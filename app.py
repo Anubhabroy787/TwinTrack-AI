@@ -17,7 +17,34 @@ st.markdown('''
     
     @keyframes fadeSlideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes pulseGlow { 0% { transform: scale(0.9); opacity: 0.4; } 100% { transform: scale(1.1); opacity: 0.8; } }
-
+    /* --- NEW PREMIUM LOGIN ANIMATIONS --- */
+    .glow-title {
+        font-family: 'Orbitron', sans-serif;
+        font-size: 4.5rem;
+        font-weight: 900;
+        color: #ffffff;
+        text-shadow: 0 0 10px #00ffcc, 0 0 20px #00ffcc, 0 0 40px #00ffcc;
+        margin-bottom: 0px;
+        line-height: 1.1;
+    }
+    .glow-subtitle {
+        font-family: 'Share Tech Mono', monospace;
+        color: #a270ff;
+        font-size: 1.5rem;
+        letter-spacing: 6px;
+        text-transform: uppercase;
+        margin-top: 5px;
+        margin-bottom: 30px;
+    }
+    .glass-panel {
+        background: rgba(22, 21, 43, 0.4);
+        backdrop-filter: blur(15px);
+        -webkit-backdrop-filter: blur(15px);
+        border: 1px solid rgba(0, 255, 204, 0.2);
+        border-radius: 20px;
+        padding: 40px;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+    }
     .stApp { 
         background-color: #0b0a1a; 
         background-image: 
@@ -67,7 +94,8 @@ if "page" not in st.session_state: st.session_state.page = "login"
 if "chat_history" not in st.session_state: st.session_state.chat_history = []
 if "decay_penalty" not in st.session_state: st.session_state.decay_penalty = 0.0
 if "user_data" not in st.session_state: 
-    st.session_state.user_data = {"name": "Anubhab Roy", "cgpa": 7.5, "days": 30, "internals": 22, "assignments": 80, "att": 70, "hrs": 2}
+    # NO MORE HARDCODED NAME. Starts completely blank for the demo.
+    st.session_state.user_data = {"name": "", "cgpa": 7.5, "days": 30, "internals": 22, "assignments": 80, "att": 70, "hrs": 2}
 
 def switch_page(page_name): st.session_state.page = page_name
 
@@ -76,7 +104,6 @@ def extract_pdf_text(file):
         pdf_reader = PyPDF2.PdfReader(file)
         return "".join([page.extract_text() + "\n" for page in pdf_reader.pages[:5]])[:3000]
     except Exception as e: return f"Error: {e}"
-
 # ==========================================
 # 3. LOGIN PAGE 
 # ==========================================
@@ -151,26 +178,60 @@ elif st.session_state.page in ["dashboard", "syllabus", "chat"]:
     st.session_state.user_data['pred_sgpa'] = pred_sgpa
     # ---------------------------------------------------------
 
-    # --- SIDEBAR NAVIGATION ---
+   # --- SIDEBAR NAVIGATION (THE DAILY COMPANION) ---
     with st.sidebar:
         st.markdown(f"### 👤 {d.get('name', 'USER').upper()}")
-        st.markdown(f"<span style='color:#888;'>Sem {d.get('sem', '3rd')} CSE<br>Narula Institute of Technology</span>", unsafe_allow_html=True)
+        st.markdown(f"<span style='color:#888;'>Sem {d.get('sem', '3rd')} CSE</span>", unsafe_allow_html=True)
         st.divider()
-        if st.button("🎛️ DASHBOARD"): switch_page("dashboard"); st.rerun()
-        if st.button("📚 SYLLABUS & DATA"): switch_page("syllabus"); st.rerun()
-        if st.button("🤖 AI AGENT"): switch_page("chat"); st.rerun()
         
+        # NAVIGATION
+        if st.button("🎛️ OVERVIEW"): switch_page("dashboard"); st.rerun()
+        if st.button("📚 SYLLABUS HUB"): switch_page("syllabus"); st.rerun()
+        if st.button("🤖 AGENTIC CHAT"): switch_page("chat"); st.rerun()
+        
+        st.divider()
+        
+        # THE DAILY COMPANION FEATURE: LIVE FOCUS TIMER
+        st.markdown("#### ⏱️ LIVE FOCUS SESSION")
+        st.caption("Complete a session to auto-boost your Twin.")
+        
+        if st.button("▶ START 25-MIN POMODORO"):
+            # Hackathon Magic: We speed up 25 mins into 5 seconds for the demo!
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+            for i in range(100):
+                time.sleep(0.02) # Fast forward for the judges
+                progress_bar.progress(i + 1)
+                status_text.text(f"Focusing... {i}%")
+            
+            # Auto-update the Twin!
+            st.session_state.user_data['hrs'] += 0.5 # Adds 30 mins
+            st.success("Session Complete! Twin updated. +0.5 Hrs")
+            time.sleep(1)
+            st.rerun()
+
+        st.divider()
+        
+        # THE ONE-CLICK DAILY LOGGER
+        st.markdown("#### 📅 DAILY QUICK LOG")
+        col_log1, col_log2 = st.columns(2)
+        with col_log1:
+            if st.button("✅ Class"):
+                st.session_state.user_data['att'] = min(100, st.session_state.user_data.get('att', 70) + 1)
+                st.toast("Attendance Logged!", icon="📈")
+                st.rerun()
+        with col_log2:
+            if st.button("❌ Missed"):
+                st.session_state.user_data['att'] = max(0, st.session_state.user_data.get('att', 70) - 2)
+                st.toast("Missed Class. Twin Penalty Applied.", icon="📉")
+                st.rerun()
+
         st.divider()
         st.markdown("#### LIVE TWIN STATUS")
         st.progress(d.get('att', 70) / 100)
         st.caption(f"Attendance: {d.get('att', 70)}%")
         st.progress(d.get('pred_sgpa', 0.0) / 10.0)
         st.caption(f"Projected SGPA: {d.get('pred_sgpa', 0.0):.2f}")
-        
-        st.divider()
-        st.markdown("<div class='danger-btn'>", unsafe_allow_html=True)
-        if st.button("🚪 LOG OUT"): switch_page("login"); st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
 
     # --- DASHBOARD VIEW ---
     if st.session_state.page == "dashboard":
