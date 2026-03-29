@@ -260,16 +260,17 @@ elif st.session_state.page == "chat":
             st.rerun()
         
         st.divider()
-        st.write(f"`TARGET:` **{d['subject']}**")
-        st.write(f"`PRED_SGPA:` **{d['pred_sgpa']:.2f}**")
-        st.write(f"`ATTENDANCE:` **{d['att']}%**")
-        st.write(f"`INTERNALS:` **{d['internals']}/30**")
+        # Using .get() prevents KeyErrors if Streamlit drops session state during rapid testing
+        st.write(f"`TARGET:` **{d.get('subject', 'N/A')}**")
+        st.write(f"`PRED_SGPA:` **{d.get('pred_sgpa', 0.0):.2f}**")
+        st.write(f"`ATTENDANCE:` **{d.get('att', 0)}%**")
+        st.write(f"`INTERNALS:` **{d.get('internals', 0)}/30**")
 
     st.markdown("<h2>> TACTICAL DECISION SUPPORT_</h2>", unsafe_allow_html=True)
     
     if not st.session_state.chat_history:
-        status = "🔴 ACTION REQUIRED" if d['att'] < 75 or d['pred_sgpa'] < 7.0 else "🟢 OPTIMAL"
-        initial_msg = f"**[ SYSTEM READY ]** Status: {status}. \n\nAgent {d['name']}, your Digital Twin predicts an SGPA of **{d['pred_sgpa']:.2f}**. You have {d['days']} cycles (days) left. I have decrypted your syllabus for {d['subject']}. Do you require a daily execution plan, or an attendance recovery protocol?"
+        status = "🔴 ACTION REQUIRED" if d.get('att', 0) < 75 or d.get('pred_sgpa', 0.0) < 7.0 else "🟢 OPTIMAL"
+        initial_msg = f"**[ SYSTEM READY ]** Status: {status}. \n\nAgent {d.get('name', 'User')}, your Digital Twin predicts an SGPA of **{d.get('pred_sgpa', 0.0):.2f}**. You have {d.get('days', 0)} cycles (days) left. I have decrypted your syllabus for {d.get('subject', 'your subject')}. Do you require a daily execution plan, or an attendance recovery protocol?"
         st.session_state.chat_history.append({"role": "assistant", "content": initial_msg})
 
     for msg in st.session_state.chat_history:
@@ -281,13 +282,13 @@ elif st.session_state.page == "chat":
         with st.chat_message("user"): st.write(prompt)
         
         sys_prompt = f"""
-        You are 'TwinTrack AI', a quantified Academic Decision Support System for engineering student {d['name']}. Respond in a precise, slightly robotic, highly tactical tone.
+        You are 'TwinTrack AI', a quantified Academic Decision Support System for engineering student {d.get('name', 'User')}. Respond in a precise, slightly robotic, highly tactical tone.
         
         USER TELEMETRY:
-        - Target: {d['subject']} in {d['days']} days
-        - Current Stats: {d['att']}% Attendance | {d['cgpa']} CGPA | Studies {d['hrs']} hrs/day.
-        - Internal Marks: {d['internals']}/30 | Assignments: {d['assignments']}% complete.
-        - Simulated Predicted SGPA: {d['pred_sgpa']:.2f}
+        - Target: {d.get('subject', 'Subject')} in {d.get('days', 0)} days
+        - Current Stats: {d.get('att', 0)}% Attendance | {d.get('cgpa', 0.0)} CGPA | Studies {d.get('hrs', 0)} hrs/day.
+        - Internal Marks: {d.get('internals', 0)}/30 | Assignments: {d.get('assignments', 0)}% complete.
+        - Simulated Predicted SGPA: {d.get('pred_sgpa', 0.0):.2f}
         
         SYLLABUS DATA:
         {d.get('syllabus_content', 'General topics only.')}
@@ -295,7 +296,7 @@ elif st.session_state.page == "chat":
         STRATEGY RULES (MANDATORY):
         1. ACT LIKE A DECISION SYSTEM, NOT A CHATBOT. Give quantitative, actionable outputs.
         2. If attendance < 75%, explicitly state: "WARNING: You must attend approximately [X] classes to reach the 75% threshold."
-        3. When giving a study plan, map specific modules from the SYLLABUS DATA directly to their {d['hrs']} hour daily limit.
+        3. When giving a study plan, map specific modules from the SYLLABUS DATA directly to their {d.get('hrs', 0)} hour daily limit.
         4. Use terminal-style bullet points and bold numbers.
         """
         
