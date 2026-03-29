@@ -59,28 +59,31 @@ def switch_page(page_name):
     st.session_state.page = page_name
     # st.rerun() removed to kill the yellow warning bug!
 
-# --- PDF SMART SCANNER ---
+# --- PDF SMART SCANNER (UPGRADED) ---
 def extract_semester_syllabus(file, subject_name, semester_val):
     try:
+        # Reset file pointer just in case Streamlit read it already
+        file.seek(0) 
         pdf_reader = PyPDF2.PdfReader(file)
-        sem_str = f"Semester {semester_val}"
-        sem_alt = f"{semester_val} Semester"
-        sem_short = f"Sem {semester_val}"
+        full_text = ""
         
-        relevant_pages = []
+        # 1. Make the search "Fuzzy" (Grab just the first word, like "Data" or "Computer")
+        core_keyword = subject_name.split()[0].lower() 
+        
+        # 2. Collect any page that mentions the core concept
         for page in pdf_reader.pages:
             p_text = page.extract_text()
-            if p_text and any(s.lower() in p_text.lower() for s in [sem_str, sem_alt, sem_short]):
-                if subject_name.lower() in p_text.lower():
-                    relevant_pages.append(p_text)
-        
-        if not relevant_pages: # Fallback if specific semester string isn't perfectly matched
-            for page in pdf_reader.pages:
-                p_text = page.extract_text()
-                if p_text and subject_name.lower() in p_text.lower():
-                    relevant_pages.append(p_text)
+            if p_text and core_keyword in p_text.lower():
+                full_text += p_text + "\n"
+                
+        # 3. Fallback: If it STILL can't find it, just feed LLaMA the first 10 pages
+        if not full_text.strip():
+            for page in pdf_reader.pages[:10]:
+                if page.extract_text():
+                    full_text += page.extract_text() + "\n"
                     
-        return "\n".join(relevant_pages)[:6000] # Cap for speed
+        # LLaMA 3.3 is smart. Feed it a massive 15,000 character chunk.
+        return full_text[:15000] 
     except Exception as e:
         return f"Syllabus extraction failed: {e}"
 
