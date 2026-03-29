@@ -6,391 +6,259 @@ from groq import Groq
 import PyPDF2
 import time
 
-# --- UI & CSS CONFIGURATION (PRO-CYBERPUNK EDITION) ---
-st.set_page_config(page_title="TwinTrack AI | Royal Bengal Coders", page_icon="🎓", layout="wide")
+# ==========================================
+# 1. UI & CSS CONFIGURATION (OMOSKILLO + CYBERPUNK)
+# ==========================================
+st.set_page_config(page_title="TwinTrack AI | Royal Bengal Coders", page_icon="🎓", layout="wide", initial_sidebar_state="expanded")
 
 st.markdown('''
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap');
-
-    /* Smooth Fade-In Animation for Page Loads */
-    @keyframes fadeSlideIn {
-        from { opacity: 0; transform: translateY(15px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-
-    /* Global Theme - Adjusted to match the deep dashboard purples */
-    .stApp { 
-        background-color: #141326; 
-        color: #00ffcc; 
-        font-family: 'Share Tech Mono', monospace;
-        animation: fadeSlideIn 0.6s ease-out;
-    }
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Inter:wght@400;600&display=swap');
     
-    /* Headers */
-    h1, h2, h3, h4 { 
-        font-family: 'Orbitron', sans-serif; 
-        text-transform: uppercase;
-        color: #a270ff !important;
-        text-shadow: 0 0 5px rgba(162, 112, 255, 0.4);
-    }
-    
-    h1 { text-align: center; font-size: 3.5rem !important;}
+    /* Smooth Fade-In Animation */
+    @keyframes fadeSlideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-    /* Modernized, Responsive Buttons */
-    div.stButton > button {
-        background-color: #1c1a35;
-        color: #00ffcc; 
-        border: 1px solid #00ffcc; 
-        border-radius: 8px; 
-        box-shadow: 0 0 8px rgba(0, 255, 204, 0.1) inset;
-        font-family: 'Orbitron', sans-serif;
-        text-transform: uppercase;
-        letter-spacing: 1.5px;
-        transition: all 0.3s ease-in-out;
-        width: 100%;
-        padding: 10px;
+    /* Core Theme */
+    .stApp { background-color: #0d0c1d; color: #e0e0e0; font-family: 'Inter', sans-serif; animation: fadeSlideIn 0.5s ease-out; }
+    h1, h2, h3, h4, h5 { font-family: 'Orbitron', sans-serif; color: #a270ff !important; text-transform: uppercase; }
+    
+    /* Omoskillo-style Cyberpunk Cards */
+    .cyber-card {
+        background-color: #16152b;
+        border-radius: 16px;
+        padding: 20px;
+        border: 1px solid rgba(162, 112, 255, 0.2);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        margin-bottom: 20px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
-    div.stButton > button:hover { 
-        background-color: #00ffcc;
-        color: #141326;
-        box-shadow: 0 0 15px #00ffcc; 
+    .cyber-card:hover {
         transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(162, 112, 255, 0.15);
+        border: 1px solid rgba(0, 255, 204, 0.4);
     }
     
-    /* Back Button specific styling override */
-    .back-btn div.stButton > button {
-        background-color: transparent;
-        border: 1px solid #ff0055;
-        color: #ff0055;
-        width: auto;
-        padding: 5px 20px;
-        font-size: 0.8rem;
+    /* Login Page Specific Styling */
+    .login-container { background: #16152b; padding: 40px; border-radius: 20px; border: 1px solid #3d396b; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+    .hero-text { font-family: 'Orbitron', sans-serif; font-size: 3rem; color: #00ffcc; line-height: 1.2; text-shadow: 0 0 10px rgba(0,255,204,0.3); }
+    
+    /* Modernized Buttons */
+    div.stButton > button {
+        background: linear-gradient(45deg, #1c1a35, #2a264f); color: #00ffcc; border: 1px solid #00ffcc; border-radius: 8px; 
+        font-family: 'Orbitron', sans-serif; text-transform: uppercase; letter-spacing: 1px; width: 100%; padding: 10px; transition: 0.3s;
     }
-    .back-btn div.stButton > button:hover {
-        background-color: #ff0055;
-        color: white;
-        box-shadow: 0 0 15px #ff0055;
-    }
+    div.stButton > button:hover { background: #00ffcc; color: #0d0c1d; box-shadow: 0 0 15px #00ffcc; }
+    
+    .danger-btn div.stButton > button { border-color: #ff0055; color: #ff0055; }
+    .danger-btn div.stButton > button:hover { background: #ff0055; color: white; box-shadow: 0 0 15px #ff0055; }
 
-    /* Responsive Terminal Inputs & Dashboard Cards */
-    .stTextInput>div>div>input, .stNumberInput>div>div>input, .stSelectbox>div>div>div {
-        background-color: #1c1a35 !important;
-        color: #fff !important;
-        border-radius: 8px !important;
-        border: 1px solid #3d396b !important;
-        font-family: 'Share Tech Mono', monospace;
-    }
-
-    /* Metrics / Numbers */
-    div[data-testid="stMetricValue"] { 
-        color: #fff; 
-        font-family: 'Orbitron', sans-serif;
-    }
-    div[data-testid="stMetricLabel"] {
-        color: #a270ff;
-    }
-    
-    /* Dividers */
-    hr { border-color: rgba(162, 112, 255, 0.2); }
-    
-    /* Progress Bars */
-    .stProgress > div > div > div > div {
-        background-image: linear-gradient(to right, #a270ff, #00ffcc);
-    }
+    /* Inputs & Progress */
+    .stTextInput>div>div>input, .stNumberInput>div>div>input, .stSelectbox>div>div>div { background-color: #0d0c1d !important; color: #fff !important; border-radius: 8px !important; border: 1px solid #3d396b !important; }
+    .stProgress > div > div > div > div { background-image: linear-gradient(to right, #a270ff, #00ffcc); border-radius: 10px; }
+    hr { border-color: rgba(162, 112, 255, 0.15); }
 </style>
 ''', unsafe_allow_html=True)
 
-# --- API & BACKEND SETUP (GROQ LLaMA 3.3) ---
-# Ensure your secrets.toml has GROQ_API_KEY
+# ==========================================
+# 2. API SETUP & BACKEND LOGIC
+# ==========================================
 try:
-    api_key = st.secrets["GROQ_API_KEY"]
-    client = Groq(api_key=api_key)
-except KeyError:
-    st.warning("API Key not found. Please set GROQ_API_KEY in Streamlit secrets.")
+    client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+except Exception:
     client = None
 
-# --- STATE MANAGEMENT ---
-if "page" not in st.session_state: st.session_state.page = "landing"
+if "page" not in st.session_state: st.session_state.page = "login"
 if "chat_history" not in st.session_state: st.session_state.chat_history = []
-if "user_data" not in st.session_state: st.session_state.user_data = {}
+if "decay_penalty" not in st.session_state: st.session_state.decay_penalty = 0.0
+if "user_data" not in st.session_state: 
+    st.session_state.user_data = {"name": "Anubhab Roy", "cgpa": 7.5, "days": 30, "internals": 22, "assignments": 80, "att": 70, "hrs": 2}
 
-def switch_page(page_name):
-    st.session_state.page = page_name
+def switch_page(page_name): st.session_state.page = page_name
 
-# --- PDF SMART SCANNER ---
-def extract_semester_syllabus(file, subject_name, semester_val):
+def extract_pdf_text(file):
     try:
-        file.seek(0) 
         pdf_reader = PyPDF2.PdfReader(file)
-        full_text = ""
-        core_keyword = subject_name.split()[0].lower() 
-        for page in pdf_reader.pages:
-            p_text = page.extract_text()
-            if p_text and core_keyword in p_text.lower():
-                full_text += p_text + "\n"
-        if not full_text.strip():
-            for page in pdf_reader.pages[:10]:
-                if page.extract_text():
-                    full_text += page.extract_text() + "\n"
-        return full_text[:15000] 
-    except Exception as e:
-        return f"Syllabus extraction error: {e}"
+        return "".join([page.extract_text() + "\n" for page in pdf_reader.pages[:5]])[:3000]
+    except Exception as e: return f"Error: {e}"
 
 # ==========================================
-# PHASE 1 & 1.5: LANDING & LOGIN
+# 3. LOGIN PAGE (Formal Illustration + Tech Form)
 # ==========================================
-if st.session_state.page == "landing":
-    st.markdown('''
-        <br><br><br>
-        <div style="text-align: center;">
-            <h1>TwinTrack AI</h1>
-            <h3 style="color: #00ffcc; letter-spacing: 5px;">[ ACADEMIC DIGITAL TWIN ]</h3>
-            <p style="color: #a270ff; font-family: monospace; opacity: 0.8;">ENGINEERED BY ROYAL BENGAL CODERS</p>
-            <br>
-            <div style="border: 1px solid rgba(162,112,255,0.3); padding: 20px; max-width: 600px; margin: auto; background: #1c1a35; border-radius: 12px;">
-                <h5 style="color: #ccc; margin:0; font-family: 'Share Tech Mono', monospace;">"Input your parameters. Upload your syllabus. Visualize your academic trajectory in real-time."</h5>
+if st.session_state.page == "login":
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    col1, col2 = st.columns([1.2, 1], gap="large")
+    
+    with col1:
+        # Formal but cyberpunk "Illustration" area
+        st.markdown('''
+            <div style="padding: 20px;">
+                <h1 class="hero-text">MASTER YOUR<br><span style="color:#a270ff;">ACADEMIC</span><br>TRAJECTORY.</h1>
+                <p style="color: #888; font-size: 1.1rem; margin-top: 20px;">
+                    TwinTrack AI builds a real-time digital twin of your semester. 
+                    Upload your syllabus, track your metrics, and let our predictive agent schedule your success.
+                </p>
+                <div style="margin-top: 40px; padding: 20px; border-left: 4px solid #00ffcc; background: rgba(0, 255, 204, 0.05);">
+                    <h4 style="color:#00ffcc; margin:0;">SYSTEM V.2.0 ONLINE</h4>
+                    <span style="font-family: monospace; color: #666;">> SECURE CONNECTION ESTABLISHED...</span>
+                </div>
             </div>
-        </div>
-        <br><br>
-    ''', unsafe_allow_html=True)
-    col1, col2, col3 = st.columns([1, 1, 1])
-    with col2: 
-        st.button("[ LAUNCH WORKSPACE ]", use_container_width=True, on_click=switch_page, args=("login",))
+        ''', unsafe_allow_html=True)
 
-elif st.session_state.page == "login":
-    st.markdown("<div class='back-btn'>", unsafe_allow_html=True)
-    st.button("< BACK", on_click=switch_page, args=("landing",))
-    st.markdown("</div>", unsafe_allow_html=True)
-    
-    col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        st.markdown("<h2 style='text-align: center;'>[ AUTHENTICATION ]</h2>", unsafe_allow_html=True)
-        tab1, tab2 = st.tabs(["SIGN IN", "REGISTER"])
-        with tab1:
-            st.text_input("EMAIL ADDRESS", value="anubhab@narula.edu")
-            st.text_input("PASSWORD", type="password", value="********")
-            st.button("[ SECURE LOGIN ]", use_container_width=True, on_click=switch_page, args=("intake",))
-        with tab2:
-            st.text_input("FULL NAME")
-            st.text_input("EMAIL ADDRESS", key="register_email")
-            st.button("[ CREATE PROFILE ]", use_container_width=True, on_click=switch_page, args=("intake",))
-
-# ==========================================
-# PHASE 2: INTAKE 
-# ==========================================
-elif st.session_state.page == "intake":
-    st.markdown("<div class='back-btn'>", unsafe_allow_html=True)
-    st.button("< BACK", on_click=switch_page, args=("login",))
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    st.markdown("<h2>[ SYSTEM CALIBRATION ]</h2>", unsafe_allow_html=True)
-    st.markdown("`ENTER BASELINE METRICS`")
-    
-    u_name = st.text_input("STUDENT NAME:", value=st.session_state.user_data.get("name", "Anubhab Roy"))
-    col1, col2 = st.columns(2)
-    with col1:
-        course = st.selectbox("PROGRAM:", ["B.Tech", "BBA", "BCA"], index=0)
-        year = st.selectbox("YEAR:", ["1st", "2nd", "3rd", "4th"], index=1)
-    with col2:
-        sem = st.selectbox("SEMESTER:", ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th"], index=2)
-    
-    st.write("")
-    if st.button("[ GENERATE DIGITAL TWIN ]", use_container_width=True):
-        st.session_state.user_data.update({"name": u_name, "course": course, "year": year, "sem": sem})
-        switch_page("analysis")
-        st.rerun()
-
-# ==========================================
-# PHASE 3: THE DIGITAL TWIN DASHBOARD
-# ==========================================
-elif st.session_state.page == "analysis":
-    d = st.session_state.user_data
-    
-    col1, col2 = st.columns([1, 5])
-    with col1:
-        st.markdown("<div class='back-btn'>", unsafe_allow_html=True)
-        st.button("< BACK", on_click=switch_page, args=("intake",))
-        st.markdown("</div>", unsafe_allow_html=True)
-    with col2:
-        st.markdown(f"<h2>[ DASHBOARD: {d.get('name', 'USER').upper()} ]</h2>", unsafe_allow_html=True)
-
-    # --- TOP CONTROL PANEL (INPUTS) ---
-    with st.expander("[ ADJUST LIVE PARAMETERS ]", expanded=True):
-        col_a, col_b, col_c = st.columns(3)
-        with col_a:
-            cgpa = st.number_input("CURRENT CGPA:", min_value=0.0, max_value=10.0, format="%.2f", value=st.session_state.user_data.get("cgpa", 7.5))
-            days = st.number_input("DAYS UNTIL EXAM:", min_value=0, value=st.session_state.user_data.get("days", 30))
-        with col_b:
-            internals = st.number_input("INTERNAL MARKS (/30):", min_value=0, max_value=30, value=st.session_state.user_data.get("internals", 22))
-            assignments = st.slider("ASSIGNMENTS DONE (%):", 0, 100, st.session_state.user_data.get("assignments", 80))
-        with col_c:
-            att = st.slider("ATTENDANCE (%):", 0, 100, st.session_state.user_data.get("att", 70))
-            hrs = st.slider("DAILY STUDY HOURS:", 0, 12, st.session_state.user_data.get("hrs", 2))
-
-    # Calculate Twin Logic
-    base_calc = (cgpa * 0.5) + (internals / 30 * 2) + (assignments / 100 * 1) + (hrs * 0.15) + ((att - 75) * 0.01)
-    pred_sgpa = np.clip(base_calc, 0.0, 10.0)
-    risk_level = "CRITICAL" if att < 75 else "WARNING" if pred_sgpa < 7.0 else "OPTIMAL"
-    
-    # Save current state dynamically
-    st.session_state.user_data.update({"att": att, "days": days, "cgpa": cgpa, "hrs": hrs, "internals": internals, "assignments": assignments, "pred_sgpa": pred_sgpa})
-
-    st.divider()
-
-    # --- MAIN INTERACTIVE DASHBOARD ---
-    dash_col1, dash_col2, dash_col3 = st.columns([1, 1.5, 1])
-    
-    with dash_col1:
-        st.markdown("#### OVERALL STATUS")
-        st.metric(label="PROJECTED SGPA", value=f"{pred_sgpa:.2f}", delta=f"{pred_sgpa - cgpa:.2f} Delta")
-        st.metric(label="SYSTEM HEALTH", value=risk_level)
+        st.markdown("<div class='login-container'>", unsafe_allow_html=True)
+        st.markdown("<h2 style='text-align: center; margin-bottom: 30px;'>WELCOME BACK</h2>", unsafe_allow_html=True)
         
-        # Donut Chart for Attendance
-        fig_donut = go.Figure(data=[go.Pie(
-            labels=['Attended', 'Missed'], 
-            values=[att, 100-att], 
-            hole=.7,
-            marker_colors=['#a270ff', '#1c1a35'],
-            textinfo='none'
-        )])
-        fig_donut.update_layout(
-            showlegend=False, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-            margin=dict(t=10, b=10, l=10, r=10), height=180,
-            annotations=[dict(text=f'{att}%<br>Attnd', x=0.5, y=0.5, font_size=20, font_color='#fff', showarrow=False)]
-        )
-        st.plotly_chart(fig_donut, use_container_width=True)
-
-    with dash_col2:
-        st.markdown("#### PERFORMANCE METRICS")
-        # Interactive Bar Chart
-        categories = ['Current CGPA', 'Pred SGPA', 'Internals (Scale 10)']
-        values = [cgpa, pred_sgpa, (internals/30)*10]
+        # Intake Form built right into the login
+        u_name = st.text_input("STUDENT ID (NAME)", value=st.session_state.user_data.get("name", "Anubhab Roy"))
+        pwd = st.text_input("PASSWORD", type="password", value="********")
+        sem = st.selectbox("CURRENT SEMESTER", ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th"], index=2)
         
-        fig_bar = go.Figure(data=[go.Bar(
-            x=categories, 
-            y=values,
-            marker_color=['#1c1a35', '#a270ff', '#00ffcc'],
-            text=[f"{v:.1f}" for v in values],
-            textposition='auto'
-        )])
-        fig_bar.update_layout(
-            paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-            font=dict(color='#ccc'),
-            yaxis=dict(range=[0, 10], gridcolor='#3d396b'),
-            margin=dict(t=20, b=0, l=0, r=0), height=280
-        )
-        st.plotly_chart(fig_bar, use_container_width=True)
-
-    with dash_col3:
-        st.markdown("#### ONGOING TASKS")
-        st.markdown(f"<span style='color:#a270ff'>Assignments</span> ({assignments}%)", unsafe_allow_html=True)
-        st.progress(assignments / 100)
-        
-        study_goal = min(hrs / 8, 1.0) # Assume 8 hours is 100% max capacity
-        st.markdown(f"<span style='color:#00ffcc'>Daily Study Quota</span> ({hrs} Hrs)", unsafe_allow_html=True)
-        st.progress(study_goal)
-        
-        days_progress = max(1.0 - (days / 120), 0.0) # Assume 120 days in a sem
-        st.markdown(f"<span style='color:#ff0055'>Semester Timeline</span> ({days} Days Left)", unsafe_allow_html=True)
-        st.progress(days_progress)
-
-    st.divider()
-
-    st.markdown("<h2>[ SYLLABUS INTEGRATION ]</h2>", unsafe_allow_html=True)
-    file = st.file_uploader("UPLOAD SYLLABUS DOCUMENT [PDF]", type=['pdf'])
-
-    if file:
-        subjects = ["Data Structures & Algorithms", "Computer Organization", "Digital Logic", "Mathematics"]
-        sub = st.selectbox("TARGET SUBJECT:", subjects, index=0)
-        
-        if st.button("[ ANALYZE & EXTRACT STRATEGY ]", use_container_width=True):
-            progress_text = "Processing document vectors..."
-            my_bar = st.progress(0, text=progress_text)
-            for percent_complete in range(100):
-                time.sleep(0.005)
-                my_bar.progress(percent_complete + 1, text=progress_text)
-            my_bar.empty()
-            
-            with st.spinner(f"Extracting modules for '{sub}'..."):
-                raw_syllabus = extract_semester_syllabus(file, sub, d['sem'])
-                st.session_state.user_data.update({"subject": sub, "syllabus_content": raw_syllabus})
-            
-            switch_page("chat")
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("➔ LOGIN TO DASHBOARD"):
+            st.session_state.user_data.update({"name": u_name, "sem": sem})
+            switch_page("dashboard")
             st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
 
 # ==========================================
-# PHASE 4: THE BEAST (Decision Support Chat)
+# 4. MAIN APP (Sidebar + Dashboard)
 # ==========================================
-elif st.session_state.page == "chat":
+elif st.session_state.page in ["dashboard", "syllabus", "chat"]:
+    
     d = st.session_state.user_data
     
+    # --- CORE MATH: The Twin Algorithm ---
+    base_calc = (d['cgpa'] * 0.5) + (d['internals'] / 30 * 2) + (d['assignments'] / 100 * 1) + (d['hrs'] * 0.15) + ((d['att'] - 75) * 0.01)
+    pred_sgpa = np.clip(base_calc - st.session_state.decay_penalty, 0.0, 10.0)
+    st.session_state.user_data['pred_sgpa'] = pred_sgpa
+
+    # --- SIDEBAR NAVIGATION (OMOSKILLO STYLE) ---
     with st.sidebar:
-        st.markdown("<h2 style='color: #a270ff;'>[ CONTROLS ]</h2>", unsafe_allow_html=True)
+        st.markdown(f"### 👤 {d['name']}")
+        st.markdown(f"<span style='color:#888;'>Sem {d.get('sem', '3rd')} Engineering</span>", unsafe_allow_html=True)
+        st.divider()
         
-        st.markdown("<div class='back-btn'>", unsafe_allow_html=True)
-        if st.button("< BACK TO DASHBOARD"): 
-            switch_page("analysis")
-            st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
-        
-        if st.button("[ RESET SESSION ]"): 
-            st.session_state.chat_history = []
-            switch_page("intake")
-            st.rerun()
+        if st.button("🎛️ DASHBOARD"): switch_page("dashboard"); st.rerun()
+        if st.button("📚 SYLLABUS & DATA"): switch_page("syllabus"); st.rerun()
+        if st.button("🤖 AI AGENT"): switch_page("chat"); st.rerun()
         
         st.divider()
-        st.write(f"`TARGET:` **{d.get('subject', 'N/A')}**")
-        st.write(f"`PROJ_SGPA:` **{d.get('pred_sgpa', 0.0):.2f}**")
-        st.write(f"`ATTENDANCE:` **{d.get('att', 0)}%**")
-        st.write(f"`INTERNALS:` **{d.get('internals', 0)}/30**")
+        st.markdown("#### LIVE TWIN STATUS")
+        st.progress(d['att'] / 100)
+        st.caption(f"Attendance: {d['att']}%")
+        st.progress(pred_sgpa / 10.0)
+        st.caption(f"Projected SGPA: {pred_sgpa:.2f}")
+        
+        st.divider()
+        st.markdown("<div class='danger-btn'>", unsafe_allow_html=True)
+        if st.button("🚪 LOG OUT"): switch_page("login"); st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown("<h2>[ DECISION SUPPORT SYSTEM ]</h2>", unsafe_allow_html=True)
-    
-    if not st.session_state.chat_history:
-        status = "🔴 ACTION REQUIRED" if d.get('att', 0) < 75 or d.get('pred_sgpa', 0.0) < 7.0 else "🟢 OPTIMAL"
-        initial_msg = f"**[ SYSTEM READY ]** Status: {status}. \n\n{d.get('name', 'User')}, your Digital Twin predicts an SGPA of **{d.get('pred_sgpa', 0.0):.2f}**. You have {d.get('days', 0)} days remaining. Syllabus context loaded for {d.get('subject', 'your subject')}. \n\nDo you require a module breakdown or an attendance recovery protocol?"
-        st.session_state.chat_history.append({"role": "assistant", "content": initial_msg})
+    # --- DASHBOARD VIEW ---
+    if st.session_state.page == "dashboard":
+        st.markdown("<h2>OVERVIEW DASHBOARD</h2>", unsafe_allow_html=True)
+        
+        # Quick Stats Row (4 columns)
+        st.markdown("<div style='display:flex; gap:20px;'>", unsafe_allow_html=True)
+        col1, col2, col3, col4 = st.columns(4)
+        col1.markdown(f"<div class='cyber-card'><h5>Proj SGPA</h5><h2 style='color:#fff;'>{pred_sgpa:.2f}</h2></div>", unsafe_allow_html=True)
+        col2.markdown(f"<div class='cyber-card'><h5>Days Left</h5><h2 style='color:#fff;'>{d['days']}</h2></div>", unsafe_allow_html=True)
+        col3.markdown(f"<div class='cyber-card'><h5>Internals</h5><h2 style='color:#fff;'>{d['internals']}/30</h2></div>", unsafe_allow_html=True)
+        col4.markdown(f"<div class='cyber-card'><h5>Attendance</h5><h2 style='color:#fff;'>{d['att']}%</h2></div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
-    for msg in st.session_state.chat_history:
-        with st.chat_message(msg["role"]): 
-            st.write(msg["content"])
+        # Middle Row: Charts & Progress
+        mid_col1, mid_col2 = st.columns([2, 1])
+        with mid_col1:
+            st.markdown("<div class='cyber-card'>", unsafe_allow_html=True)
+            st.markdown("#### Performance Activities")
+            fig_bar = go.Figure(data=[go.Bar(x=['Assignments', 'Internals', 'Study Hrs', 'Attendance'], y=[d['assignments']/10, (d['internals']/30)*10, d['hrs'], d['att']/10], marker_color=['#a270ff', '#00ffcc', '#1c1a35', '#ff0055'])])
+            fig_bar.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', yaxis=dict(showgrid=True, gridcolor='#3d396b'), margin=dict(t=10, b=10, l=10, r=10), height=250)
+            st.plotly_chart(fig_bar, use_container_width=True)
+            st.markdown("</div>", unsafe_allow_html=True)
+            
+        with mid_col2:
+            st.markdown("<div class='cyber-card'>", unsafe_allow_html=True)
+            st.markdown("#### Course Statistics")
+            st.write(f"Assignments ({d['assignments']}%)")
+            st.progress(d['assignments'] / 100)
+            st.write(f"Daily Study Quota ({d['hrs']}/8 Hrs)")
+            st.progress(min(d['hrs'] / 8, 1.0))
+            st.write(f"Semester Timeline ({d['days']} Days Left)")
+            st.progress(max(1.0 - (d['days'] / 120), 0.0))
+            st.markdown("</div>", unsafe_allow_html=True)
 
-    if prompt := st.chat_input("Input query..."):
-        st.session_state.chat_history.append({"role": "user", "content": prompt})
-        with st.chat_message("user"): st.write(prompt)
+        # Bottom Row: Weakest Topics & Gamification Controls (OMOSKILLO Style)
+        bot_col1, bot_col2 = st.columns(2)
+        with bot_col1:
+            st.markdown("<div class='cyber-card'>", unsafe_allow_html=True)
+            st.markdown("#### Detected Weak Topics")
+            st.error("1. Graph Algorithms (Needs Review)")
+            st.warning("2. Boolean Algebra (Internals Low)")
+            st.info("3. Pipelining Hazards")
+            st.markdown("</div>", unsafe_allow_html=True)
+            
+        with bot_col2:
+            st.markdown("<div class='cyber-card'>", unsafe_allow_html=True)
+            st.markdown("#### System Controls & Gamification")
+            # Live parameter sliders integrated cleanly
+            new_att = st.slider("Update Attendance %", 0, 100, d['att'], label_visibility="collapsed")
+            new_hrs = st.slider("Update Daily Study Hrs", 0, 12, d['hrs'], label_visibility="collapsed")
+            if new_att != d['att'] or new_hrs != d['hrs']:
+                st.session_state.user_data.update({"att": new_att, "hrs": new_hrs})
+                st.rerun()
+                
+            st.markdown("<div class='danger-btn' style='margin-top:15px;'>", unsafe_allow_html=True)
+            if st.button("⚠️ SIMULATE MISSED STUDY DAY (-0.15 SGPA)"):
+                st.session_state.decay_penalty += 0.15
+                st.rerun()
+            st.markdown("</div>", unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
+
+    # --- SYLLABUS UPLOAD VIEW ---
+    elif st.session_state.page == "syllabus":
+        st.markdown("<h2>DATA INGESTION ENGINE</h2>", unsafe_allow_html=True)
+        st.markdown("<div class='cyber-card'>", unsafe_allow_html=True)
+        st.markdown("Upload your Syllabus or Academic Routine PDF to map modules to study hours.")
+        file1 = st.file_uploader("Upload Document [PDF]", type=['pdf'])
+        sub = st.selectbox("Assign to Subject:", ["Data Structures", "Computer Architecture", "Digital Logic"])
+        if file1 and st.button("[ PROCESS & SYNC TO AGENT ]"):
+            with st.spinner("Extracting vectors..."):
+                raw = extract_pdf_text(file1)
+                st.session_state.user_data.update({"subject": sub, "syllabus_content": raw})
+                st.success("Synced successfully. Agent is ready.")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    # --- AI AGENT CHAT VIEW ---
+    elif st.session_state.page == "chat":
+        st.markdown("<h2>AGENTIC COMMAND CENTER</h2>", unsafe_allow_html=True)
+        st.markdown("<div class='cyber-card'>", unsafe_allow_html=True)
         
-        sys_prompt = f"""
-        You are 'TwinTrack AI', an Academic Decision Support System for engineering student {d.get('name', 'User')}. Respond in a precise, analytical, and professional tone.
-        
-        USER TELEMETRY:
-        - Target: {d.get('subject', 'Subject')} in {d.get('days', 0)} days
-        - Current Stats: {d.get('att', 0)}% Attendance | {d.get('cgpa', 0.0)} CGPA | Studies {d.get('hrs', 0)} hrs/day.
-        - Internal Marks: {d.get('internals', 0)}/30 | Assignments: {d.get('assignments', 0)}% complete.
-        - Simulated Predicted SGPA: {d.get('pred_sgpa', 0.0):.2f}
-        
-        SYLLABUS DATA:
-        {d.get('syllabus_content', 'General topics only.')}
-        
-        STRATEGY RULES (MANDATORY):
-        1. ACT LIKE A DECISION SYSTEM. Give quantitative, actionable outputs.
-        2. If attendance < 75%, state: "Action Required: You must attend approximately [X] classes to reach the 75% threshold."
-        3. When giving a study plan, map specific modules from the SYLLABUS DATA directly to their {d.get('hrs', 0)} hour daily limit.
-        4. Use clear bullet points and bold numbers. Do not use conversational filler.
-        """
-        
-        with st.chat_message("assistant"):
-            with st.spinner("Analyzing telemetry..."):
-                if client:
-                    try:
-                        chat_completion = client.chat.completions.create(
-                            messages=[{"role": "system", "content": sys_prompt}, {"role": "user", "content": prompt}],
-                            model="llama-3.3-70b-versatile",
-                        )
-                        bot_response = chat_completion.choices[0].message.content
-                        st.write(bot_response)
-                        st.session_state.chat_history.append({"role": "assistant", "content": bot_response})
-                    except Exception as e:
-                        st.error(f"[ ERROR ]: API Connection Failed. Details: {e}")
-                else:
-                    st.error("[ ERROR ]: LLM client not initialized. Check API key.")
+        if not st.session_state.chat_history:
+            sys_prompt = f"Act as TwinTrack AI. Generate a 2-sentence proactive warning message for {d['name']} based on Pred SGPA {d.get('pred_sgpa', 0.0):.2f} and attendance {d['att']}%. Suggest a module to study."
+            with st.spinner("Agent initializing..."):
+                try:
+                    chat_completion = client.chat.completions.create(messages=[{"role": "system", "content": sys_prompt}], model="llama-3.3-70b-versatile")
+                    initial_msg = f"**[ PROACTIVE ALERT ]**\n\n" + chat_completion.choices[0].message.content
+                except Exception:
+                    initial_msg = f"**[ SYSTEM READY ]** SGPA: {d.get('pred_sgpa', 0.0):.2f}. How can I assist your study planning today?"
+            st.session_state.chat_history.append({"role": "assistant", "content": initial_msg})
+
+        for msg in st.session_state.chat_history:
+            with st.chat_message(msg["role"]): st.write(msg["content"])
+
+        if prompt := st.chat_input("Command the Twin..."):
+            st.session_state.chat_history.append({"role": "user", "content": prompt})
+            with st.chat_message("user"): st.write(prompt)
+            
+            sys_prompt = f"You are TwinTrack AI, an Academic Agent for {d['name']}. Target: {d.get('subject', 'Subject')}. Pred SGPA: {d.get('pred_sgpa', 0.0):.2f}. Give actionable outputs using bullet points."
+            with st.chat_message("assistant"):
+                with st.spinner("Processing..."):
+                    if client:
+                        try:
+                            chat_completion = client.chat.completions.create(messages=[{"role": "system", "content": sys_prompt}, {"role": "user", "content": prompt}], model="llama-3.3-70b-versatile")
+                            bot_res = chat_completion.choices[0].message.content
+                            st.write(bot_res)
+                            st.session_state.chat_history.append({"role": "assistant", "content": bot_res})
+                        except Exception as e: st.error("API Error.")
+        st.markdown("</div>", unsafe_allow_html=True)
