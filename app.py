@@ -15,16 +15,26 @@ st.markdown('''
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Inter:wght@400;600&display=swap');
     
-    /* Smooth Fade-In Animation */
     @keyframes fadeSlideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes pulseGlow { 0% { transform: scale(0.9); opacity: 0.4; } 100% { transform: scale(1.1); opacity: 0.8; } }
 
-    /* Core Theme */
-    .stApp { background-color: #0d0c1d; color: #e0e0e0; font-family: 'Inter', sans-serif; animation: fadeSlideIn 0.5s ease-out; }
+    /* Core Theme with Cyber Grid Background */
+    .stApp { 
+        background-color: #0b0a1a; 
+        background-image: 
+            linear-gradient(rgba(162, 112, 255, 0.05) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(162, 112, 255, 0.05) 1px, transparent 1px);
+        background-size: 40px 40px;
+        color: #e0e0e0; 
+        font-family: 'Inter', sans-serif; 
+        animation: fadeSlideIn 0.5s ease-out; 
+    }
+    
     h1, h2, h3, h4, h5 { font-family: 'Orbitron', sans-serif; color: #a270ff !important; text-transform: uppercase; }
     
-    /* Omoskillo-style Cyberpunk Cards */
     .cyber-card {
-        background-color: #16152b;
+        background-color: rgba(22, 21, 43, 0.8);
+        backdrop-filter: blur(10px);
         border-radius: 16px;
         padding: 20px;
         border: 1px solid rgba(162, 112, 255, 0.2);
@@ -32,28 +42,21 @@ st.markdown('''
         margin-bottom: 20px;
         transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
-    .cyber-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(162, 112, 255, 0.15);
-        border: 1px solid rgba(0, 255, 204, 0.4);
-    }
     
-    /* Login Page Specific Styling */
-    .login-container { background: #16152b; padding: 40px; border-radius: 20px; border: 1px solid #3d396b; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-    .hero-text { font-family: 'Orbitron', sans-serif; font-size: 3rem; color: #00ffcc; line-height: 1.2; text-shadow: 0 0 10px rgba(0,255,204,0.3); }
+    .hero-text { font-family: 'Orbitron', sans-serif; font-size: 3.2rem; color: #00ffcc; line-height: 1.1; text-shadow: 0 0 15px rgba(0,255,204,0.4); }
     
-    /* Modernized Buttons */
     div.stButton > button {
         background: linear-gradient(45deg, #1c1a35, #2a264f); color: #00ffcc; border: 1px solid #00ffcc; border-radius: 8px; 
-        font-family: 'Orbitron', sans-serif; text-transform: uppercase; letter-spacing: 1px; width: 100%; padding: 10px; transition: 0.3s;
+        font-family: 'Orbitron', sans-serif; text-transform: uppercase; letter-spacing: 1.5px; width: 100%; padding: 12px; transition: 0.3s;
     }
-    div.stButton > button:hover { background: #00ffcc; color: #0d0c1d; box-shadow: 0 0 15px #00ffcc; }
+    div.stButton > button:hover { background: #00ffcc; color: #0d0c1d; box-shadow: 0 0 20px #00ffcc; transform: translateY(-2px); }
     
     .danger-btn div.stButton > button { border-color: #ff0055; color: #ff0055; }
     .danger-btn div.stButton > button:hover { background: #ff0055; color: white; box-shadow: 0 0 15px #ff0055; }
 
-    /* Inputs & Progress */
-    .stTextInput>div>div>input, .stNumberInput>div>div>input, .stSelectbox>div>div>div { background-color: #0d0c1d !important; color: #fff !important; border-radius: 8px !important; border: 1px solid #3d396b !important; }
+    .stTextInput>div>div>input, .stNumberInput>div>div>input, .stSelectbox>div>div>div { 
+        background-color: rgba(13, 12, 29, 0.9) !important; color: #fff !important; border-radius: 8px !important; border: 1px solid #3d396b !important; 
+    }
     .stProgress > div > div > div > div { background-image: linear-gradient(to right, #a270ff, #00ffcc); border-radius: 10px; }
     hr { border-color: rgba(162, 112, 255, 0.15); }
 </style>
@@ -82,43 +85,52 @@ def extract_pdf_text(file):
     except Exception as e: return f"Error: {e}"
 
 # ==========================================
-# 3. LOGIN PAGE (Formal Illustration + Tech Form)
+# 3. LOGIN PAGE (Animated Illustration + Form)
 # ==========================================
 if st.session_state.page == "login":
     st.markdown("<br><br>", unsafe_allow_html=True)
-    col1, col2 = st.columns([1.2, 1], gap="large")
+    col1, spacing, col2 = st.columns([1.2, 0.2, 1])
     
     with col1:
-        # Formal but cyberpunk "Illustration" area
+        # Animated CSS Illustration (Glowing Geometric Core)
         st.markdown('''
-            <div style="padding: 20px;">
-                <h1 class="hero-text">MASTER YOUR<br><span style="color:#a270ff;">ACADEMIC</span><br>TRAJECTORY.</h1>
-                <p style="color: #888; font-size: 1.1rem; margin-top: 20px;">
-                    TwinTrack AI builds a real-time digital twin of your semester. 
-                    Upload your syllabus, track your metrics, and let our predictive agent schedule your success.
-                </p>
-                <div style="margin-top: 40px; padding: 20px; border-left: 4px solid #00ffcc; background: rgba(0, 255, 204, 0.05);">
-                    <h4 style="color:#00ffcc; margin:0;">SYSTEM V.2.0 ONLINE</h4>
-                    <span style="font-family: monospace; color: #666;">> SECURE CONNECTION ESTABLISHED...</span>
+            <div style="display: flex; align-items: center; margin-bottom: 30px;">
+                <div style="position: relative; width: 120px; height: 120px;">
+                    <div style="position: absolute; width: 100%; height: 100%; background: #00ffcc; border-radius: 50%; filter: blur(30px); animation: pulseGlow 3s infinite alternate;"></div>
+                    <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position: relative; z-index: 10;">
+                        <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                        <polyline points="2 17 12 22 22 17"></polyline>
+                        <polyline points="2 12 12 17 22 12"></polyline>
+                    </svg>
                 </div>
+            </div>
+            
+            <h1 class="hero-text">MASTER YOUR<br><span style="color:#a270ff;">ACADEMIC</span><br>TRAJECTORY.</h1>
+            <p style="color: #a0a0b0; font-size: 1.1rem; margin-top: 15px; max-width: 90%;">
+                TwinTrack AI builds a real-time digital twin of your semester. 
+                Upload your syllabus, track your metrics, and let our predictive agent schedule your success.
+            </p>
+            
+            <div style="margin-top: 40px; padding: 15px 20px; border-left: 4px solid #00ffcc; background: rgba(0, 255, 204, 0.05); display: inline-block;">
+                <h5 style="color:#00ffcc; margin:0; font-family: 'Share Tech Mono', monospace;">SYSTEM V.2.0 ONLINE</h5>
+                <span style="font-family: 'Share Tech Mono', monospace; color: #666; font-size: 0.9rem;">> SECURE CONNECTION ESTABLISHED...</span>
             </div>
         ''', unsafe_allow_html=True)
 
     with col2:
-        st.markdown("<div class='login-container'>", unsafe_allow_html=True)
-        st.markdown("<h2 style='text-align: center; margin-bottom: 30px;'>WELCOME BACK</h2>", unsafe_allow_html=True)
+        st.markdown("<br><h2 style='text-align: left; margin-bottom: 20px;'>WELCOME BACK</h2>", unsafe_allow_html=True)
         
-        # Intake Form built right into the login
+        # Native Streamlit Form Elements (No broken HTML wrappers)
         u_name = st.text_input("STUDENT ID (NAME)", value=st.session_state.user_data.get("name", "Anubhab Roy"))
         pwd = st.text_input("PASSWORD", type="password", value="********")
         sem = st.selectbox("CURRENT SEMESTER", ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th"], index=2)
         
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("➔ LOGIN TO DASHBOARD"):
+        
+        if st.button("➔ INITIALIZE TWIN"):
             st.session_state.user_data.update({"name": u_name, "sem": sem})
             switch_page("dashboard")
             st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
 
 # ==========================================
 # 4. MAIN APP (Sidebar + Dashboard)
