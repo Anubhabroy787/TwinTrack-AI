@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 from groq import Groq
 import PyPDF2
 import time
-
+import io
 # ==========================================
 # 1. PREMIUM SAAS UI & CSS CONFIGURATION
 # ==========================================
@@ -257,38 +257,59 @@ elif st.session_state.page in ["dashboard", "syllabus", "chat"]:
         st.plotly_chart(fig_bar, use_container_width=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # --- SYLLABUS PAGE (FULLY DYNAMIC NOW) ---
+# --- SYLLABUS PAGE (NOW WITH PERMANENT MEMORY) ---
     elif st.session_state.page == "syllabus":
         st.markdown("<h2>Data Ingestion</h2>", unsafe_allow_html=True)
         st.markdown("<div class='saas-card'>", unsafe_allow_html=True)
-        st.write("Upload your PDF and type your specific subject. The AI will extract your tasks automatically.")
+        
+        # 1. Check if we already have a PDF in memory
+        if "pdf_bytes" not in st.session_state:
+            st.session_state.pdf_bytes = None
+            
+        st.write("Upload your PDF once. TwinTrack caches it in memory so you can extract multiple subjects without re-uploading.")
         
         f1 = st.file_uploader("Syllabus / Routine [PDF]", type=['pdf'])
-        # NO MORE DROPDOWN. Free text input.
-        sub = st.text_input("Enter Subject Name (e.g., Computer Networks, Operating Systems):", value="Operating Systems")
         
-        st.markdown("<div class='accent-btn'>", unsafe_allow_html=True)
-        if f1 and st.button("Process & Sync with LLaMA"):
-            with st.spinner("Extracting text and calling LLM to generate specific tasks..."):
-                raw = extract_pdf_text(f1, sub)
-                st.session_state.user_data.update({"subject": sub, "syllabus_content": raw})
-                
-                # --- ACTUAL AI DATA PARSING ---
-                if client and raw.strip():
-                    try:
-                        parse_prompt = f"Based on this syllabus for {sub}, generate 3 short assignment tasks and 2 weak topics to study. Format exactly like this: Task1|Task2|Task3||Topic1|Topic2. Keep them short. Syllabus text: {raw[:2000]}"
-                        res = client.chat.completions.create(messages=[{"role": "user", "content": parse_prompt}], model="llama-3.3-70b-versatile").choices[0].message.content
-                        parts = res.split('||')
-                        if len(parts) == 2:
-                            tasks = parts[0].split('|')
-                            topics = parts[1].split('|')
-                            st.session_state.user_data['dynamic_tasks'] = [t.strip() for t in tasks if t.strip()]
-                            st.session_state.user_data['dynamic_topics'] = [t.strip() for t in topics if t.strip()]
-                    except Exception as e:
-                        st.warning("LLM formatting failed, using extracted text defaults.")
-                
-                st.success("Successfully Extracted! Dashboard tasks and AI Agent are now synced to this specific subject.")
-        st.markdown("</div></div>", unsafe_allow_html=True)
+        # 2. Save to permanent memory the second it is uploaded
+        if f1:
+            st.session_state.pdf_bytes = f1.getvalue()
+            st.success("📄 PDF successfully cached in system memory! You can safely switch tabs.")
+
+        # 3. Only show the extraction tool if a PDF is in memory
+        if st.session_state.pdf_bytes:
+            st.markdown("<hr>", unsafe_allow_html=True)
+            st.markdown("<h4>Extract Subject Data</h4>", unsafe_allow_html=True)
+            
+            sub = st.text_input("Enter Subject Name (e.g., Computer Networks, Operating Systems):", value="Operating Systems")
+            
+            st.markdown("<div class='accent-btn'>", unsafe_allow_html=True)
+            if st.button("Process & Sync with LLaMA"):
+                with st.spinner(f"Searching memory for '{sub}' and generating tasks..."):
+                    
+                    # Convert the saved bytes back into a readable PDF file
+                    pdf_file_obj = io.BytesIO(st.session_state.pdf_bytes)
+                    
+                    # Extract text
+                    raw = extract_pdf_text(pdf_file_obj, sub)
+                    st.session_state.user_data.update({"subject": sub, "syllabus_content": raw})
+                    
+                    # --- ACTUAL AI DATA PARSING ---
+                    if client and raw.strip():
+                        try:
+                            parse_prompt = f"Based on this syllabus for {sub}, generate 3 short assignment tasks and 2 weak topics to study. Format exactly like this: Task1|Task2|Task3||Topic1|Topic2. Keep them short. Syllabus text: {raw[:2000]}"
+                            res = client.chat.completions.create(messages=[{"role": "user", "content": parse_prompt}], model="llama-3.3-70b-versatile").choices[0].message.content
+                            parts = res.split('||')
+                            if len(parts) == 2:
+                                tasks = parts[0].split('|')
+                                topics = parts[1].split('|')
+                                st.session_state.user_data['dynamic_tasks'] = [t.strip() for t in tasks if t.strip()]
+                                st.session_state.user_data['dynamic_topics'] = [t.strip() for t in topics if t.strip()]
+                        except Exception as e:
+                            st.warning("LLM formatting failed, using extracted text defaults.")
+                    
+                    st.success("Successfully Extracted! Dashboard tasks and AI Agent are now synced.")
+            st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
     # --- AGENT PAGE (NOW WITH PDF MEMORY) ---
     elif st.session_state.page == "chat":
