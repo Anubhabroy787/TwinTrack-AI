@@ -2,14 +2,14 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
-import google.generativeai as genai
+from groq import Groq
 import PyPDF2
 import time
 
 # --- UI & CSS CONFIGURATION (The "Cool & Smooth" Factor) ---
 st.set_page_config(page_title="TwinTrack AI | Royal Bengal Coders", page_icon="🎓", layout="wide")
 
-st.markdown("""
+st.markdown('''
 <style>
     /* Dark Theme & Smooth Transitions */
     .stApp { background-color: #0b0f19; color: #e0e6ed; }
@@ -44,12 +44,11 @@ st.markdown("""
         border: 1px solid #30363d;
     }
 </style>
-""", unsafe_allow_html=True)
+''', unsafe_allow_html=True)
 
-# --- API & BACKEND SETUP (GEMINI 2.0 FLASH) ---
-api_key = st.secrets["GEMINI_API_KEY"]
-genai.configure(api_key=api_key)
-model = genai.GenerativeModel('gemini-2.0-flash')
+# --- API & BACKEND SETUP (GROQ LLaMA 3.3) ---
+api_key = st.secrets["GROQ_API_KEY"]
+client = Groq(api_key=api_key)
 
 # --- STATE MANAGEMENT ---
 if "page" not in st.session_state: st.session_state.page = "landing"
@@ -89,17 +88,17 @@ def extract_semester_syllabus(file, subject_name, semester_val):
 # PHASE 1: LANDING PAGE
 # ==========================================
 if st.session_state.page == "landing":
-    st.markdown("<br><br><br>", unsafe_allow_html=True)
-    st.markdown("""
+    st.markdown('''
+        <br><br><br>
         <div style="text-align: center;">
             <h1 style="font-size: 70px; font-weight: 900; background: -webkit-linear-gradient(#00d2ff, #3a7bd5); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">TwinTrack AI</h1>
             <h3 style="color: #a3b8cc; letter-spacing: 2px;">THE ACADEMIC DIGITAL TWIN</h3>
             <p style="color: #58a6ff; font-family: monospace;">Developed by the Royal Bengal Coders</p>
             <br>
-            <h5 style="font-style: italic; color: #8b949e; max-width: 600px; margin: auto;">"Stop guessing your trajectory. Upload your syllabus, visualize your future, and let Gemini 2.0 calculate your exact survival path."</h5>
+            <h5 style="font-style: italic; color: #8b949e; max-width: 600px; margin: auto;">"Stop guessing your trajectory. Upload your syllabus, visualize your future, and let LLaMA 3.3 calculate your exact survival path."</h5>
         </div>
         <br><br>
-    """, unsafe_allow_html=True)
+    ''', unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([1, 1, 1])
     with col2:
@@ -222,7 +221,7 @@ elif st.session_state.page == "analysis":
             switch_page("chat")
 
 # ==========================================
-# PHASE 4: THE BEAST (GEMINI 2.0 Chat)
+# PHASE 4: THE BEAST (LLaMA 3.3 Chat)
 # ==========================================
 elif st.session_state.page == "chat":
     d = st.session_state.user_data
@@ -246,7 +245,7 @@ elif st.session_state.page == "chat":
     # -- Initial Contextual Output --
     if not st.session_state.chat_history:
         status = "🔴 CRITICAL - ATTENDANCE RISK" if d['att'] < 75 else "🟢 STABLE - TACTICAL BUNK AUTHORIZED"
-        with st.status("Syncing Gemini 2.0 Neural Link...", expanded=True) as status_box:
+        with st.status("Syncing LLaMA 3.3 Neural Link...", expanded=True) as status_box:
             st.write("Injecting syllabus matrix...")
             st.write("Calibrating attendance constraints...")
             st.write("Generating optimal survival path...")
@@ -267,12 +266,10 @@ elif st.session_state.page == "chat":
         with st.chat_message("user"): 
             st.write(prompt)
         
-        # The Context-Heavy "Beast" Prompt adapted for Gemini
+        # The Context-Heavy "Beast" Prompt adapted for Groq
         syllabus_data = d.get('syllabus_content', 'General topics only.')
         
-        # Gemini takes everything natively as text context.
-        gemini_prompt = f"""
-        SYSTEM INSTRUCTIONS:
+        sys_prompt = f"""
         You are 'TwinTrack AI', a high-performance, slightly strict Academic Strategist for an engineering student named {d['name']}.
         
         USER DATA:
@@ -289,22 +286,24 @@ elif st.session_state.page == "chat":
         3. Determine if studying {d['hrs']} hours a day is actually enough math to cover the syllabus in {d['days']} days. Tell them the truth.
         4. If they ask about games, movies, or non-academics, shut it down immediately and redirect to {d['subject']}.
         5. Keep responses highly structured, using bullet points and bold text for readability.
-
-        ------------------
-        USER COMMAND:
-        {prompt}
         """
         
         with st.chat_message("assistant"):
-            with st.spinner("Processing tactical response via Gemini 2.0..."):
+            with st.spinner("Processing tactical response via LLaMA 3.3..."):
                 try:
-                    # Request generation from Gemini
-                    response = model.generate_content(gemini_prompt)
-                    bot_response = response.text
+                    # Request generation from Groq
+                    chat_completion = client.chat.completions.create(
+                        messages=[
+                            {"role": "system", "content": sys_prompt},
+                            {"role": "user", "content": prompt}
+                        ],
+                        model="llama-3.3-70b-versatile",
+                    )
+                    
+                    bot_response = chat_completion.choices[0].message.content
                     
                     st.write(bot_response)
                     st.session_state.chat_history.append({"role": "assistant", "content": bot_response})
                     
                 except Exception as e:
-                    # Provide debug info inside the app to catch issues during hackathon prep
-                    st.error(f"⚠️ Neural Link Error: Check your Streamlit Secrets and API Quota. Details: {e}")
+                    st.error(f"⚠️ Neural Link Error: Check your Streamlit Secrets. Details: {e}")
