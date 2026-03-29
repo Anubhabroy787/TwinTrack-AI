@@ -105,42 +105,71 @@ def extract_pdf_text(file):
         return "".join([page.extract_text() + "\n" for page in pdf_reader.pages[:5]])[:3000]
     except Exception as e: return f"Error: {e}"
 # ==========================================
-# 3. LOGIN PAGE 
+# 3. LOGIN PAGE (Premium Glassmorphic UI)
 # ==========================================
 if st.session_state.page == "login":
     st.markdown("<br><br>", unsafe_allow_html=True)
-    col1, spacing, col2 = st.columns([1.2, 0.2, 1])
+    col1, spacing, col2 = st.columns([1.2, 0.1, 1])
     
     with col1:
+        # NEW GLOWING BRANDING (This replaces the old "Master your trajectory" text)
         st.markdown('''
-            <div style="display: flex; align-items: center; margin-bottom: 30px;">
-                <div style="position: relative; width: 120px; height: 120px;">
-                    <div style="position: absolute; width: 100%; height: 100%; background: #00ffcc; border-radius: 50%; filter: blur(30px); animation: pulseGlow 3s infinite alternate;"></div>
-                    <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="position: relative; z-index: 10;">
-                        <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
-                        <polyline points="2 17 12 22 22 17"></polyline>
-                        <polyline points="2 12 12 17 22 12"></polyline>
-                    </svg>
-                </div>
-            </div>
-            <h1 class="hero-text">MASTER YOUR<br><span style="color:#a270ff;">ACADEMIC</span><br>TRAJECTORY.</h1>
-            <p style="color: #a0a0b0; font-size: 1.1rem; margin-top: 15px; max-width: 90%;">TwinTrack AI builds a real-time digital twin of your semester. Upload your syllabus, track your metrics, and let our predictive agent schedule your success.</p>
-            <div style="margin-top: 40px; padding: 15px 20px; border-left: 4px solid #00ffcc; background: rgba(0, 255, 204, 0.05); display: inline-block;">
-                <h5 style="color:#00ffcc; margin:0; font-family: 'Share Tech Mono', monospace;">SYSTEM V.2.0 ONLINE</h5>
-                <span style="font-family: 'Share Tech Mono', monospace; color: #666; font-size: 0.9rem;">> SECURE CONNECTION ESTABLISHED...</span>
+            <style>
+                .glow-title {
+                    font-family: 'Orbitron', sans-serif;
+                    font-size: 4.5rem;
+                    font-weight: 900;
+                    color: #ffffff;
+                    text-shadow: 0 0 10px #00ffcc, 0 0 20px #00ffcc, 0 0 40px #00ffcc;
+                    margin-bottom: 0px;
+                    line-height: 1.1;
+                }
+                .glow-subtitle {
+                    font-family: 'Share Tech Mono', monospace;
+                    color: #a270ff;
+                    font-size: 1.5rem;
+                    letter-spacing: 6px;
+                    text-transform: uppercase;
+                    margin-top: 5px;
+                    margin-bottom: 30px;
+                }
+            </style>
+            
+            <h1 class="glow-title">TWINTRACK AI</h1>
+            <p class="glow-subtitle">Academic Digital Twin</p>
+            
+            <p style="color: #a0a0b0; font-size: 1.15rem; margin-top: 20px; max-width: 85%; line-height: 1.6;">
+                Stop guessing your trajectory. TwinTrack ingests your syllabus, tracks your live telemetry, and deploys an autonomous agent to engineer your success.
+            </p>
+            
+            <div style="margin-top: 50px; padding: 20px; border-left: 4px solid #a270ff; background: rgba(162, 112, 255, 0.05); border-radius: 0 8px 8px 0;">
+                <h5 style="color:#a270ff; margin:0; font-family: 'Share Tech Mono', monospace;">SYSTEM V.2.0 DIAGNOSTICS</h5>
+                <p style="font-family: 'Share Tech Mono', monospace; color: #00ffcc; font-size: 0.95rem; margin-top: 10px; margin-bottom: 0;">
+                    > ENCRYPTING CONNECTION... [OK]<br>
+                    > LOADING PREDICTIVE ENGINE... [OK]<br>
+                    > WAITING FOR USER TELEMETRY...
+                </p>
             </div>
         ''', unsafe_allow_html=True)
 
     with col2:
-        st.markdown("<br><h2 style='text-align: left; margin-bottom: 20px;'>WELCOME BACK</h2>", unsafe_allow_html=True)
-        u_name = st.text_input("STUDENT ID (NAME)", value=st.session_state.user_data.get("name", "Anubhab Roy"))
-        pwd = st.text_input("PASSWORD", type="password", value="********")
-        sem = st.selectbox("CURRENT SEMESTER", ["1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th"], index=2)
+        st.markdown("<h2 style='text-align: left; color: #fff; margin-bottom: 30px;'>INITIALIZE TWIN</h2>", unsafe_allow_html=True)
+        
+        # --- THE FIX: COMPLETELY BLANK INPUTS ---
+        u_name = st.text_input("STUDENT IDENTIFIER", value="", placeholder="e.g. John Doe")
+        pwd = st.text_input("ACCESS KEY", type="password", value="", placeholder="Enter Password")
+        sem = st.selectbox("CURRENT ACADEMIC SEMESTER", ["Select Semester...", "1st", "2nd", "3rd", "4th", "5th", "6th", "7th", "8th"], index=0)
+        
         st.markdown("<br>", unsafe_allow_html=True)
-        if st.button("➔ INITIALIZE TWIN"):
-            st.session_state.user_data.update({"name": u_name, "sem": sem})
-            switch_page("dashboard")
-            st.rerun()
+        
+        # Validation logic to ensure they don't click it while empty
+        if st.button("➔ ACCESS DASHBOARD"):
+            if u_name.strip() == "" or sem == "Select Semester...":
+                st.error("⚠️ Please enter your Name and select a Semester to initialize the Twin.")
+            else:
+                st.session_state.user_data.update({"name": u_name, "sem": sem})
+                switch_page("dashboard")
+                st.rerun()
 
 # ==========================================
 # 4. MAIN APP 
