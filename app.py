@@ -138,16 +138,11 @@ if st.session_state.page == "login":
 elif st.session_state.page in ["dashboard", "syllabus", "chat"]:
     
     d = st.session_state.user_data
-    
-    # --- CORE MATH: The Twin Algorithm ---
-    base_calc = (d['cgpa'] * 0.5) + (d['internals'] / 30 * 2) + (d['assignments'] / 100 * 1) + (d['hrs'] * 0.15) + ((d['att'] - 75) * 0.01)
-    pred_sgpa = np.clip(base_calc - st.session_state.decay_penalty, 0.0, 10.0)
-    st.session_state.user_data['pred_sgpa'] = pred_sgpa
 
     # --- SIDEBAR NAVIGATION (OMOSKILLO STYLE) ---
     with st.sidebar:
-        st.markdown(f"### 👤 {d['name']}")
-        st.markdown(f"<span style='color:#888;'>Sem {d.get('sem', '3rd')} Engineering</span>", unsafe_allow_html=True)
+        st.markdown(f"### 👤 {d.get('name', 'USER').upper()}")
+        st.markdown(f"<span style='color:#888;'>Sem {d.get('sem', '3rd')} CSE<br>Narula Institute of Technology</span>", unsafe_allow_html=True)
         st.divider()
         
         if st.button("🎛️ DASHBOARD"): switch_page("dashboard"); st.rerun()
@@ -156,10 +151,10 @@ elif st.session_state.page in ["dashboard", "syllabus", "chat"]:
         
         st.divider()
         st.markdown("#### LIVE TWIN STATUS")
-        st.progress(d['att'] / 100)
-        st.caption(f"Attendance: {d['att']}%")
-        st.progress(pred_sgpa / 10.0)
-        st.caption(f"Projected SGPA: {pred_sgpa:.2f}")
+        st.progress(d.get('att', 70) / 100)
+        st.caption(f"Attendance: {d.get('att', 70)}%")
+        st.progress(d.get('pred_sgpa', 0.0) / 10.0)
+        st.caption(f"Projected SGPA: {d.get('pred_sgpa', 0.0):.2f}")
         
         st.divider()
         st.markdown("<div class='danger-btn'>", unsafe_allow_html=True)
@@ -170,8 +165,37 @@ elif st.session_state.page in ["dashboard", "syllabus", "chat"]:
     if st.session_state.page == "dashboard":
         st.markdown("<h2>OVERVIEW DASHBOARD</h2>", unsafe_allow_html=True)
         
-        # Quick Stats Row (4 columns)
-        st.markdown("<div style='display:flex; gap:20px;'>", unsafe_allow_html=True)
+        # 1. CORE INTERACTION: LIVE TELEMETRY INPUTS
+        with st.expander("🎛️ ADJUST LIVE TWIN PARAMETERS", expanded=True):
+            col_in1, col_in2, col_in3 = st.columns(3)
+            with col_in1:
+                new_cgpa = st.number_input("CURRENT CGPA", min_value=0.0, max_value=10.0, value=float(d.get('cgpa', 7.5)), step=0.1)
+                new_days = st.number_input("DAYS UNTIL EXAM", min_value=0, value=int(d.get('days', 30)))
+            with col_in2:
+                new_internals = st.number_input("INTERNAL MARKS (/30)", min_value=0, max_value=30, value=int(d.get('internals', 22)))
+                new_assign = st.slider("ASSIGNMENTS DONE (%)", 0, 100, int(d.get('assignments', 80)))
+            with col_in3:
+                new_att = st.slider("ATTENDANCE (%)", 0, 100, int(d.get('att', 70)))
+                new_hrs = st.slider("DAILY STUDY HOURS", 0, 12, int(d.get('hrs', 2)))
+
+            # Instantly update state if user changes a value
+            if new_cgpa != d['cgpa'] or new_days != d['days'] or new_internals != d['internals'] or new_assign != d['assignments'] or new_att != d['att'] or new_hrs != d['hrs']:
+                st.session_state.user_data.update({
+                    "cgpa": new_cgpa, "days": new_days, "internals": new_internals, 
+                    "assignments": new_assign, "att": new_att, "hrs": new_hrs
+                })
+                st.rerun()
+
+        # Update reference after inputs
+        d = st.session_state.user_data
+
+        # --- CORE MATH: The Twin Algorithm ---
+        base_calc = (d['cgpa'] * 0.5) + (d['internals'] / 30 * 2) + (d['assignments'] / 100 * 1) + (d['hrs'] * 0.15) + ((d['att'] - 75) * 0.01)
+        pred_sgpa = np.clip(base_calc - st.session_state.decay_penalty, 0.0, 10.0)
+        st.session_state.user_data['pred_sgpa'] = pred_sgpa
+
+        # Quick Stats Row
+        st.markdown("<div style='display:flex; gap:20px; margin-top: 10px;'>", unsafe_allow_html=True)
         col1, col2, col3, col4 = st.columns(4)
         col1.markdown(f"<div class='cyber-card'><h5>Proj SGPA</h5><h2 style='color:#fff;'>{pred_sgpa:.2f}</h2></div>", unsafe_allow_html=True)
         col2.markdown(f"<div class='cyber-card'><h5>Days Left</h5><h2 style='color:#fff;'>{d['days']}</h2></div>", unsafe_allow_html=True)
@@ -200,7 +224,7 @@ elif st.session_state.page in ["dashboard", "syllabus", "chat"]:
             st.progress(max(1.0 - (d['days'] / 120), 0.0))
             st.markdown("</div>", unsafe_allow_html=True)
 
-        # Bottom Row: Weakest Topics & Gamification Controls (OMOSKILLO Style)
+        # Bottom Row: Weakest Topics & Gamification Controls
         bot_col1, bot_col2 = st.columns(2)
         with bot_col1:
             st.markdown("<div class='cyber-card'>", unsafe_allow_html=True)
@@ -212,19 +236,18 @@ elif st.session_state.page in ["dashboard", "syllabus", "chat"]:
             
         with bot_col2:
             st.markdown("<div class='cyber-card'>", unsafe_allow_html=True)
-            st.markdown("#### System Controls & Gamification")
-            # Live parameter sliders integrated cleanly
-            new_att = st.slider("Update Attendance %", 0, 100, d['att'], label_visibility="collapsed")
-            new_hrs = st.slider("Update Daily Study Hrs", 0, 12, d['hrs'], label_visibility="collapsed")
-            if new_att != d['att'] or new_hrs != d['hrs']:
-                st.session_state.user_data.update({"att": new_att, "hrs": new_hrs})
-                st.rerun()
-                
-            st.markdown("<div class='danger-btn' style='margin-top:15px;'>", unsafe_allow_html=True)
+            st.markdown("#### System Gamification")
+            st.markdown("<p style='color:#888;'>Demonstrate Twin Decay logic to the judges. Simulating missed work instantly drops the projected SGPA.</p>", unsafe_allow_html=True)
+            st.markdown("<div class='danger-btn'>", unsafe_allow_html=True)
             if st.button("⚠️ SIMULATE MISSED STUDY DAY (-0.15 SGPA)"):
                 st.session_state.decay_penalty += 0.15
                 st.rerun()
             st.markdown("</div>", unsafe_allow_html=True)
+            
+            if st.session_state.decay_penalty > 0:
+                if st.button("🔄 RESTORE TWIN STATE"):
+                    st.session_state.decay_penalty = 0.0
+                    st.rerun()
             st.markdown("</div>", unsafe_allow_html=True)
 
     # --- SYLLABUS UPLOAD VIEW ---
@@ -247,13 +270,16 @@ elif st.session_state.page in ["dashboard", "syllabus", "chat"]:
         st.markdown("<div class='cyber-card'>", unsafe_allow_html=True)
         
         if not st.session_state.chat_history:
-            sys_prompt = f"Act as TwinTrack AI. Generate a 2-sentence proactive warning message for {d['name']} based on Pred SGPA {d.get('pred_sgpa', 0.0):.2f} and attendance {d['att']}%. Suggest a module to study."
+            sys_prompt = f"Act as TwinTrack AI. Generate a 2-sentence proactive warning message for {d.get('name', 'User')} based on Pred SGPA {d.get('pred_sgpa', 0.0):.2f} and attendance {d.get('att', 70)}%. Suggest a module to study."
             with st.spinner("Agent initializing..."):
-                try:
-                    chat_completion = client.chat.completions.create(messages=[{"role": "system", "content": sys_prompt}], model="llama-3.3-70b-versatile")
-                    initial_msg = f"**[ PROACTIVE ALERT ]**\n\n" + chat_completion.choices[0].message.content
-                except Exception:
-                    initial_msg = f"**[ SYSTEM READY ]** SGPA: {d.get('pred_sgpa', 0.0):.2f}. How can I assist your study planning today?"
+                if client:
+                    try:
+                        chat_completion = client.chat.completions.create(messages=[{"role": "system", "content": sys_prompt}], model="llama-3.3-70b-versatile")
+                        initial_msg = f"**[ PROACTIVE ALERT ]**\n\n" + chat_completion.choices[0].message.content
+                    except Exception:
+                        initial_msg = f"**[ SYSTEM READY ]** SGPA: {d.get('pred_sgpa', 0.0):.2f}. How can I assist your study planning today?"
+                else:
+                    initial_msg = f"**[ SYSTEM READY ]** SGPA: {d.get('pred_sgpa', 0.0):.2f}. Connect API to enable proactive alerts."
             st.session_state.chat_history.append({"role": "assistant", "content": initial_msg})
 
         for msg in st.session_state.chat_history:
@@ -263,7 +289,7 @@ elif st.session_state.page in ["dashboard", "syllabus", "chat"]:
             st.session_state.chat_history.append({"role": "user", "content": prompt})
             with st.chat_message("user"): st.write(prompt)
             
-            sys_prompt = f"You are TwinTrack AI, an Academic Agent for {d['name']}. Target: {d.get('subject', 'Subject')}. Pred SGPA: {d.get('pred_sgpa', 0.0):.2f}. Give actionable outputs using bullet points."
+            sys_prompt = f"You are TwinTrack AI, an Academic Agent for {d.get('name', 'User')}. Target: {d.get('subject', 'Subject')}. Pred SGPA: {d.get('pred_sgpa', 0.0):.2f}. Give actionable outputs using bullet points."
             with st.chat_message("assistant"):
                 with st.spinner("Processing..."):
                     if client:
@@ -273,4 +299,6 @@ elif st.session_state.page in ["dashboard", "syllabus", "chat"]:
                             st.write(bot_res)
                             st.session_state.chat_history.append({"role": "assistant", "content": bot_res})
                         except Exception as e: st.error("API Error.")
+                    else:
+                        st.error("API Key not configured.")
         st.markdown("</div>", unsafe_allow_html=True)
