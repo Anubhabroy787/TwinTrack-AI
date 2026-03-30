@@ -6,9 +6,9 @@ from groq import Groq
 import PyPDF2
 import time
 import io
-# ==========================================
-# 1. PREMIUM SAAS UI & CSS CONFIGURATION
-# ==========================================
+
+# 1.  UI & CSS CONFIGURATION
+
 st.set_page_config(page_title="TwinTrack AI | Academic Twin", page_icon="♾️", layout="wide", initial_sidebar_state="expanded")
 
 st.markdown('''
@@ -61,9 +61,8 @@ st.markdown('''
 </style>
 ''', unsafe_allow_html=True)
 
-# ==========================================
-# 2. STATE & API MANAGEMENT
-# ==========================================
+
+# 2. API MANAGEMENT
 try:
     client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 except Exception:
@@ -101,9 +100,9 @@ def extract_pdf_text(file, subject_keyword):
     except Exception as e: 
         return f"Error: {e}"
 
-# ==========================================
+=
 # 3. LOGIN PAGE
-# ==========================================
+
 if st.session_state.page == "login":
     st.markdown("<br><br><br>", unsafe_allow_html=True)
     col1, spacing, col2 = st.columns([1.3, 0.1, 1])
@@ -135,9 +134,9 @@ if st.session_state.page == "login":
                 st.rerun()
         st.markdown("</div></div>", unsafe_allow_html=True)
 
-# ==========================================
+
 # 4. MAIN APP 
-# ==========================================
+
 elif st.session_state.page in ["dashboard", "syllabus", "chat"]:
     
     d = st.session_state.user_data
