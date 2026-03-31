@@ -100,7 +100,7 @@ def extract_pdf_text(file, subject_keyword):
     except Exception as e: 
         return f"Error: {e}"
 
-=
+
 # 3. LOGIN PAGE
 
 if st.session_state.page == "login":
